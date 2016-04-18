@@ -3,8 +3,12 @@ package com.itsix.freejob.datastore.internal;
 import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.UUID;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -14,6 +18,7 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.apache.log4j.Logger;
 
+import com.itsix.freejob.core.Role;
 import com.itsix.freejob.core.User;
 import com.itsix.freejob.datastore.DataStore;
 import com.itsix.freejob.datastore.DatabaseManager;
@@ -41,7 +46,7 @@ public class DataStoreProvider implements DataStore {
             runSQL(statement,
                     "CREATE TABLE IF NOT EXISTS test (name VARCHAR PRIMARY KEY, value VARCHAR)");
             runSQL(statement,
-                    "CREATE TABLE IF NOT EXISTS user (id UUID PRIMARY KEY, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), role VARCHAR(32))");
+                    "CREATE TABLE IF NOT EXISTS user (id UUID PRIMARY KEY, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), password VARCHAR(32), role VARCHAR(32))");
             runSQL(statement,
                     "ALTER TABLE user ADD CONSTRAINT IF NOT EXISTS user_email_unique UNIQUE(email)");
             //TODO Add company tax.
@@ -54,7 +59,7 @@ public class DataStoreProvider implements DataStore {
             runSQL(statement,
                     "ALTER TABLE location ALTER COLUMN userid SET NOT NULL");
             runSQL(statement,
-                    "CREATE TABLE IF NOT EXISTS freelancer (id UUID PRIMARY KEY, jobtypeid UUID, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), address VARCHAR(512), geo_lat DECIMAL(8,6), geo_long DECIMAL(9,6), city VARCHAR(128), county VARCHAR(128), avg_rating INT, bank_name VARCHAR(128), account_number VARCHAR(128))");
+                    "CREATE TABLE IF NOT EXISTS freelancer (id UUID PRIMARY KEY, jobtypeid UUID, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), password VARCHAR(32), address VARCHAR(512), geo_lat DECIMAL(8,6), geo_long DECIMAL(9,6), city VARCHAR(128), county VARCHAR(128), avg_rating INT, bank_name VARCHAR(128), account_number VARCHAR(128))");
             runSQL(statement,
                     "ALTER TABLE freelancer ALTER COLUMN jobtypeid SET NOT NULL");
             runSQL(statement,
@@ -106,13 +111,14 @@ public class DataStoreProvider implements DataStore {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO user(id, firstname, lastname, email, password) VALUES (?,?,?,?,?)");
+                    "INSERT INTO user(id, firstname, lastname, email, password, role) VALUES (?,?,?,?,?,?)");
             UUID userId = UUID.randomUUID();
             px.setObject(1, userId);
             px.setString(2, user.getFirstName());
             px.setString(3, user.getLastName());
             px.setString(4, user.getEmail());
             px.setString(5, md5(user.getPassword()));
+            px.setString(6, Role.USER.name());
             px.execute();
             px.close();
             cx.commit();
@@ -128,6 +134,39 @@ public class DataStoreProvider implements DataStore {
             dbm.releaseConnection(cx);
         }
         return null;
+    }
+
+    @Override
+    public Collection<User> listUsers() {
+        List<User> users = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, firstname, lastname, email, role FROM user");
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                users.add(getUser(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+
+            logger.warn("Failed to list Users", e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return users;
+    }
+
+    private User getUser(ResultSet rs) throws SQLException {
+        User user = new User();
+        user.setId((UUID) rs.getObject("id"));
+        user.setFirstName(rs.getString("firstname"));
+        user.setLastName(rs.getString("lastname"));
+        user.setEmail(rs.getString("email"));
+        user.setRole(Role.valueOf(rs.getString("role")));
+        return user;
     }
 
     public String md5(String md5) {
