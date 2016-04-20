@@ -32,4 +32,8 @@ public class Result {
         return success;
     }
 
+    public static Result error(String message) {
+        return new Result(null, message, false);
+    }
+
 }

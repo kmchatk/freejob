@@ -18,8 +18,11 @@ import org.apache.felix.ipojo.annotations.Requires;
 import org.apache.felix.ipojo.annotations.Validate;
 import org.apache.log4j.Logger;
 
+import com.itsix.freejob.core.Freelancer;
+import com.itsix.freejob.core.JobType;
 import com.itsix.freejob.core.Role;
 import com.itsix.freejob.core.User;
+import com.itsix.freejob.core.exceptions.WriteFailedException;
 import com.itsix.freejob.datastore.DataStore;
 import com.itsix.freejob.datastore.DatabaseManager;
 
@@ -104,7 +107,7 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public UUID createUser(User user) {
+    public UUID createUser(User user) throws WriteFailedException {
         logger.debug("Creating user: " + user);
         Connection cx = null;
         try {
@@ -130,10 +133,10 @@ public class DataStoreProvider implements DataStore {
             } catch (SQLException e1) {
                 logger.debug("Failed to rollback transaction", e1);
             }
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
-        return null;
     }
 
     @Override
@@ -152,7 +155,7 @@ public class DataStoreProvider implements DataStore {
             px.close();
         } catch (SQLException e) {
 
-            logger.warn("Failed to list Users", e);
+            logger.warn("Failed to list users", e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -184,5 +187,150 @@ public class DataStoreProvider implements DataStore {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @Override
+    public UUID createJobType(JobType jobType) throws WriteFailedException {
+        logger.debug("Creating job type: " + jobType);
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            cx.setAutoCommit(false);
+            PreparedStatement px = cx.prepareStatement(
+                    "INSERT INTO jobtype(id, name, description) VALUES (?,?,?)");
+            UUID jobTypeId = UUID.randomUUID();
+            px.setObject(1, jobTypeId);
+            px.setString(2, jobType.getName());
+            px.setString(3, jobType.getDescription());
+            px.execute();
+            px.close();
+            cx.commit();
+            return jobTypeId;
+        } catch (SQLException e) {
+            logger.debug("Failed to insert job type", e);
+            try {
+                cx.rollback();
+            } catch (SQLException e1) {
+                logger.debug("Failed to rollback transaction", e1);
+            }
+            throw new WriteFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+    }
+
+    @Override
+    public Collection<JobType> listJobTypes() {
+        List<JobType> jobTypes = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, name, description FROM jobtype");
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                jobTypes.add(getJobType(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+
+            logger.warn("Failed to list job types", e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return jobTypes;
+    }
+
+    private JobType getJobType(ResultSet rs) throws SQLException {
+        JobType jobType = new JobType();
+        jobType.setId((UUID) rs.getObject("id"));
+        jobType.setName(rs.getString("name"));
+        jobType.setDescription(rs.getString("description"));
+        return jobType;
+    }
+
+    @Override
+    public UUID createFreelancer(Freelancer freelancer)
+            throws WriteFailedException {
+        logger.debug("Creating freelancer: " + freelancer);
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            cx.setAutoCommit(false);
+            PreparedStatement px = cx.prepareStatement(
+                    "INSERT INTO freelancer(id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            UUID freelancerId = UUID.randomUUID();
+            px.setObject(1, freelancerId);
+            px.setObject(2, freelancer.getJobTypeId());
+            px.setString(3, freelancer.getFirstName());
+            px.setString(4, freelancer.getLastName());
+            px.setString(5, freelancer.getEmail());
+            px.setString(6, md5(freelancer.getPassword()));
+            px.setString(7, freelancer.getAddress());
+            px.setBigDecimal(8, freelancer.getLatitude());
+            px.setBigDecimal(9, freelancer.getLongitude());
+            px.setString(10, freelancer.getCity());
+            px.setString(11, freelancer.getCounty());
+            px.setInt(12, freelancer.getAvgRating());
+            px.setString(13, freelancer.getBankName());
+            px.setString(14, freelancer.getAccountNumber());
+
+            px.execute();
+            px.close();
+            cx.commit();
+            return freelancerId;
+        } catch (SQLException e) {
+            logger.debug("Failed to insert freelancer", e);
+            try {
+                cx.rollback();
+            } catch (SQLException e1) {
+                logger.debug("Failed to rollback transaction", e1);
+            }
+            throw new WriteFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+    }
+
+    @Override
+    public Collection<Freelancer> listFreelancers() {
+        List<Freelancer> freelancers = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number FROM freelancer");
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                freelancers.add(getFreelancer(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+
+            logger.warn("Failed to list freelancers", e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return freelancers;
+    }
+
+    private Freelancer getFreelancer(ResultSet rs) throws SQLException {
+        Freelancer freelancer = new Freelancer();
+        freelancer.setId((UUID) rs.getObject("id"));
+        freelancer.setJobTypeId((UUID) rs.getObject("jobtypeid"));
+        freelancer.setFirstName(rs.getString("firstname"));
+        freelancer.setLastName(rs.getString("lastname"));
+        freelancer.setEmail(rs.getString("email"));
+        freelancer.setAddress(rs.getString("address"));
+        freelancer.setLatitude(rs.getBigDecimal("geo_lat"));
+        freelancer.setLongitude(rs.getBigDecimal("geo_long"));
+        freelancer.setCity(rs.getString("city"));
+        freelancer.setCounty(rs.getString("county"));
+        freelancer.setAvgRating(rs.getInt("avg_rating"));
+        freelancer.setBankName(rs.getString("bank_name"));
+        freelancer.setAccountNumber(rs.getString("account_number"));
+        return freelancer;
     }
 }

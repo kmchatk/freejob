@@ -49,7 +49,7 @@ public class RestOsgiManager {
         jerseyInitParams.put(
                 "com.sun.jersey.config.property.resourceConfigClass",
                 "com.sun.jersey.api.core.ClassNamesResourceConfig");
-        String classNames = "com.itsix.freejob.rest.service.Service";
+        String classNames = "com.itsix.freejob.rest.service.Service, com.itsix.freejob.rest.service.FreeJobExceptionMapper";
         jerseyInitParams.put("com.sun.jersey.config.property.classnames",
                 classNames);
         jerseyInitParams.put("com.sun.jersey.config.feature.DisableWADL",

@@ -59,4 +59,9 @@ public class User {
         this.password = password;
     }
 
+    public String toString() {
+        return "User [id=" + id + ", firstName=" + firstName + ", lastName="
+                + lastName + ", email=" + email + ", role=" + role + "]";
+    }
+
 }

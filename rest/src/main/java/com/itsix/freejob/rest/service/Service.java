@@ -29,4 +29,14 @@ public class Service {
         return rc.getResource(Users.class);
     }
 
+    @Path("freelancers")
+    public Freelancers getFreelancers(@Context ResourceContext rc) {
+        return rc.getResource(Freelancers.class);
+    }
+
+    @Path("jobtypes")
+    public JobTypes getJobTypes(@Context ResourceContext rc) {
+        return rc.getResource(JobTypes.class);
+    }
+
 }

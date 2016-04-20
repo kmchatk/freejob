@@ -9,25 +9,26 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
-import com.itsix.freejob.core.User;
+import com.itsix.freejob.core.Freelancer;
 import com.itsix.freejob.core.exceptions.FreeJobException;
 import com.itsix.freejob.rest.OsgiRestResource;
 import com.itsix.freejob.rest.data.Result;
 
-public class Users extends OsgiRestResource {
+public class Freelancers extends OsgiRestResource {
 
     @POST
     @Path("register")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Result register(User user) throws FreeJobException {
-        UUID userId = getApi().register(user);
-        return Result.ok(userId);
+    public Result register(Freelancer freelancer) throws FreeJobException {
+        UUID freelancerId = getApi().register(freelancer);
+        return Result.ok(freelancerId);
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Result listUsers() {
-        return Result.ok(getApi().listUsers());
+    public Result listFreelancers() {
+        return Result.ok(getApi().listFreelancers());
     }
+
 }
