@@ -1,6 +1,8 @@
 package com.itsix.freejob.api.internal;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.felix.ipojo.annotations.Component;
@@ -12,7 +14,11 @@ import org.apache.log4j.Logger;
 import com.itsix.freejob.api.Api;
 import com.itsix.freejob.core.Freelancer;
 import com.itsix.freejob.core.JobType;
+import com.itsix.freejob.core.Login;
+import com.itsix.freejob.core.Role;
+import com.itsix.freejob.core.Session;
 import com.itsix.freejob.core.User;
+import com.itsix.freejob.core.exceptions.LoginFailedException;
 import com.itsix.freejob.core.exceptions.WriteFailedException;
 import com.itsix.freejob.datastore.DataStore;
 
@@ -24,10 +30,12 @@ public class ApiProvider implements Api {
     @Requires
     DataStore ds;
 
+    private Map<UUID, Session> sessions = new HashMap<>();
+
     private static final Logger logger = Logger.getLogger(ApiProvider.class);
 
     @Override
-    public UUID register(User user) throws WriteFailedException {
+    public UUID register(Login user) throws WriteFailedException {
         return ds.createUser(user);
     }
 
@@ -54,5 +62,19 @@ public class ApiProvider implements Api {
     @Override
     public Collection<JobType> listJobTypes() {
         return ds.listJobTypes();
+    }
+
+    @Override
+    public Session login(String email, String password, Role role)
+            throws LoginFailedException {
+        Login user = ds.login(email, password, role);
+        if (user == null) {
+            throw new LoginFailedException();
+        }
+        synchronized (sessions) {
+            Session session = new Session(user);
+            sessions.put(session.getId(), session);
+            return session;
+        }
     }
 }

@@ -10,8 +10,8 @@ public class FreeJobExceptionMapper
         implements ExceptionMapper<FreeJobException> {
 
     @Override
-    public Response toResponse(FreeJobException arg0) {
-        return Response.ok(Result.error(arg0.getMessage())).build();
+    public Response toResponse(FreeJobException e) {
+        return Response.ok(Result.error(e.getMessage())).build();
     }
 
 }

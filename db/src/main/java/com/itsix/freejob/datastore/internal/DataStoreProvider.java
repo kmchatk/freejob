@@ -20,6 +20,7 @@ import org.apache.log4j.Logger;
 
 import com.itsix.freejob.core.Freelancer;
 import com.itsix.freejob.core.JobType;
+import com.itsix.freejob.core.Login;
 import com.itsix.freejob.core.Role;
 import com.itsix.freejob.core.User;
 import com.itsix.freejob.core.exceptions.WriteFailedException;
@@ -107,7 +108,7 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public UUID createUser(User user) throws WriteFailedException {
+    public UUID createUser(Login user) throws WriteFailedException {
         logger.debug("Creating user: " + user);
         Connection cx = null;
         try {
@@ -333,4 +334,62 @@ public class DataStoreProvider implements DataStore {
         freelancer.setAccountNumber(rs.getString("account_number"));
         return freelancer;
     }
+
+    @Override
+    public Login login(String email, String password, Role role) {
+        switch (role) {
+        case FREELANCER:
+            return findFreelancer(email, password);
+        default:
+            return findUser(email, password);
+        }
+    }
+
+    public User findUser(String email, String password) {
+        User user = null;
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, firstname, lastname, email, role FROM user WHERE email = ? AND password = ?");
+            px.setString(1, email);
+            px.setString(2, md5(password));
+            ResultSet rs = px.executeQuery();
+            if (rs.next()) {
+                user = getUser(rs);
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+
+            logger.warn("Failed to find user", e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return user;
+    }
+
+    public Freelancer findFreelancer(String email, String password) {
+        Freelancer freelancer = null;
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number FROM freelancer WHERE email = ? and password = ?");
+            px.setString(1, email);
+            px.setString(2, md5(password));
+            ResultSet rs = px.executeQuery();
+            if (rs.next()) {
+                freelancer = getFreelancer(rs);
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+            logger.warn("Failed to find freelancer", e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return freelancer;
+    }
+
 }

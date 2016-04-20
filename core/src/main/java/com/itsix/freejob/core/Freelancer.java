@@ -3,7 +3,7 @@ package com.itsix.freejob.core;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public class Freelancer {
+public class Freelancer implements Login {
 
     private UUID id;
     private UUID jobTypeId;

@@ -10,7 +10,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import com.itsix.freejob.core.Freelancer;
-import com.itsix.freejob.core.exceptions.FreeJobException;
+import com.itsix.freejob.core.exceptions.WriteFailedException;
 import com.itsix.freejob.rest.OsgiRestResource;
 import com.itsix.freejob.rest.data.Result;
 
@@ -20,7 +20,7 @@ public class Freelancers extends OsgiRestResource {
     @Path("register")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Result register(Freelancer freelancer) throws FreeJobException {
+    public Result register(Freelancer freelancer) throws WriteFailedException {
         UUID freelancerId = getApi().register(freelancer);
         return Result.ok(freelancerId);
     }
