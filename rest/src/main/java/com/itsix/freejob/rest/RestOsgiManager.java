@@ -54,6 +54,10 @@ public class RestOsgiManager {
                 classNames);
         jerseyInitParams.put("com.sun.jersey.config.feature.DisableWADL",
                 "true");
+        jerseyInitParams.put(
+                "com.sun.jersey.spi.container.ContainerResponseFilters",
+                "com.itsix.freejob.rest.filter.JerseyAccessControlFilter");
+
         try {
             webContainer.registerServlet(servletContainer,
                     new String[] { "/freejob/*" }, jerseyInitParams,
