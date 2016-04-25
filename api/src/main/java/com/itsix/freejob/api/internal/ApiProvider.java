@@ -73,7 +73,7 @@ public class ApiProvider implements Api {
         }
         synchronized (sessions) {
             Session session = new Session(user);
-            sessions.put(session.getId(), session);
+            sessions.put(session.getSessionId(), session);
             return session;
         }
     }

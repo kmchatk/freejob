@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public class Session {
 
-    private UUID id = UUID.randomUUID();
+    private UUID sessionId = UUID.randomUUID();
     private Login user;
     private long created = System.currentTimeMillis();
 
@@ -12,8 +12,8 @@ public class Session {
         this.user = user;
     }
 
-    public UUID getId() {
-        return id;
+    public UUID getSessionId() {
+        return sessionId;
     }
 
     public Login getUser() {

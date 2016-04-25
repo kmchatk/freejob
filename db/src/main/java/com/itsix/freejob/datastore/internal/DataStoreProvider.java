@@ -122,7 +122,7 @@ public class DataStoreProvider implements DataStore {
             px.setString(3, user.getLastName());
             px.setString(4, user.getEmail());
             px.setString(5, md5(user.getPassword()));
-            px.setString(6, Role.USER.name());
+            px.setString(6, Role.CUSTOMER.name());
             px.execute();
             px.close();
             cx.commit();
