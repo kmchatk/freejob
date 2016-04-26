@@ -24,4 +24,8 @@ public interface Login {
 
     void setPassword(String password);
 
+    Role getRole();
+
+    void setRole(Role role);
+
 }

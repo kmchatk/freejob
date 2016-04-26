@@ -132,6 +132,14 @@ public class Freelancer implements Login {
         this.accountNumber = accountNumber;
     }
 
+    public void setRole(Role role) {
+        //Does nothing.
+    }
+
+    public Role getRole() {
+        return Role.FREELANCER;
+    }
+
     public String toString() {
         return "Freelancer [id=" + id + ", firstName=" + firstName
                 + ", lastName=" + lastName + ", email=" + email + ", jobTypeId="
