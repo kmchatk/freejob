@@ -36,7 +36,7 @@
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.core</artifactId>
 			<scope>provided</scope>
-		</dependency>		
+		</dependency>
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.ipojo.annotations</artifactId>
@@ -66,6 +66,17 @@
 			<groupId>org.ops4j.pax.web</groupId>
 			<artifactId>pax-web-jetty-bundle</artifactId>
 		</dependency>
+				
+<!-- 		<dependency> -->
+<!-- 			<groupId>com.ceesoft.ceeview.datastore.impl</groupId> -->
+<!-- 			<artifactId>com.ceesoft.ceeview.datastore.impl.h2</artifactId> -->
+<!-- 			<version>1.2.0</version> -->
+<!-- 		</dependency> -->
+<!-- 		<dependency> -->
+<!-- 			<groupId>com.ceesoft.ceeview.datastore.impl</groupId> -->
+<!-- 			<artifactId>com.ceesoft.ceeview.datastore.impl.h2.health</artifactId> -->
+<!-- 			<version>1.2.0</version> -->
+<!-- 		</dependency> -->
 	</dependencies>
 
 	<build>

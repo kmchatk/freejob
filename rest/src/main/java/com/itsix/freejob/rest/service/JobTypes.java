@@ -3,8 +3,11 @@ package com.itsix.freejob.rest.service;
 import java.util.UUID;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
@@ -27,6 +30,14 @@ public class JobTypes extends OsgiRestResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Result listJobTypes() {
         return Result.ok(getApi().listJobTypes());
+    }
+
+    @DELETE
+    @Path("{jobTypeId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result deleteJobType(@PathParam("jobTypeId") UUID jobTypeId) {
+        getApi().deleteJobType(jobTypeId);
+        return Result.ok();
     }
 
 }

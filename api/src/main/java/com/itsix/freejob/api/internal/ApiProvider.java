@@ -14,6 +14,7 @@ import org.apache.log4j.Logger;
 import com.itsix.freejob.api.Api;
 import com.itsix.freejob.core.Freelancer;
 import com.itsix.freejob.core.JobType;
+import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.Login;
 import com.itsix.freejob.core.Role;
 import com.itsix.freejob.core.Session;
@@ -45,6 +46,11 @@ public class ApiProvider implements Api {
     }
 
     @Override
+    public void deleteUser(UUID userId) {
+        ds.deleteUser(userId);
+    }
+
+    @Override
     public UUID register(Freelancer freelancer) throws WriteFailedException {
         return ds.createFreelancer(freelancer);
     }
@@ -55,13 +61,8 @@ public class ApiProvider implements Api {
     }
 
     @Override
-    public UUID createJobType(JobType jobType) throws WriteFailedException {
-        return ds.createJobType(jobType);
-    }
-
-    @Override
-    public Collection<JobType> listJobTypes() {
-        return ds.listJobTypes();
+    public void deleteFreelancer(UUID freelancerId) {
+        ds.deleteFreelancer(freelancerId);
     }
 
     @Override
@@ -77,4 +78,36 @@ public class ApiProvider implements Api {
             return session;
         }
     }
+
+    @Override
+    public UUID createJobType(JobType jobType) throws WriteFailedException {
+        return ds.createJobType(jobType);
+    }
+
+    @Override
+    public Collection<JobType> listJobTypes() {
+        return ds.listJobTypes();
+    }
+
+    @Override
+    public void deleteJobType(UUID jobTypeId) {
+        ds.deleteJobType(jobTypeId);
+    }
+
+    @Override
+    public UUID createLocation(UUID userId, Location location)
+            throws WriteFailedException {
+        return ds.createLocation(userId, location);
+    }
+
+    @Override
+    public Collection<Location> listLocations(UUID userId) {
+        return ds.listLocations(userId);
+    }
+
+    @Override
+    public void deleteLocation(UUID locationId) {
+        ds.deleteLocation(locationId);
+    }
+
 }
