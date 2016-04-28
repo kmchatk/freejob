@@ -1,5 +1,6 @@
 package com.itsix.freejob.core;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public class JobType {
@@ -7,6 +8,7 @@ public class JobType {
     private UUID id;
     private String name;
     private String description;
+    private BigDecimal commission;
 
     public UUID getId() {
         return id;
@@ -32,10 +34,18 @@ public class JobType {
         this.description = description;
     }
 
+    public BigDecimal getCommission() {
+        return commission;
+    }
+
+    public void setCommission(BigDecimal commission) {
+        this.commission = commission;
+    }
+
     @Override
     public String toString() {
         return "JobType [id=" + id + ", name=" + name + ", description="
-                + description + "]";
+                + description + ", commission=" + commission + "]";
     }
 
 }

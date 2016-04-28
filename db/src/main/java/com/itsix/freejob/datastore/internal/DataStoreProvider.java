@@ -47,49 +47,12 @@ public class DataStoreProvider implements DataStore {
             dbm.registerDatabase("freejob", null);
             connection = dbm.getConnection("freejob");
             statement = connection.createStatement();
-            runSQL(statement,
-                    "CREATE TABLE IF NOT EXISTS test (name VARCHAR PRIMARY KEY, value VARCHAR)");
-            runSQL(statement,
-                    "CREATE TABLE IF NOT EXISTS user (id UUID PRIMARY KEY, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), password VARCHAR(32), role VARCHAR(32))");
-            runSQL(statement,
-                    "ALTER TABLE user ADD CONSTRAINT IF NOT EXISTS user_email_unique UNIQUE(email)");
-            //TODO Add company tax.
-            runSQL(statement,
-                    "CREATE TABLE IF NOT EXISTS jobtype (id UUID PRIMARY KEY, name VARCHAR(64), description VARCHAR(512))");
-            runSQL(statement,
-                    "CREATE TABLE IF NOT EXISTS location (id UUID PRIMARY KEY, userid UUID, address VARCHAR(512), city VARCHAR(128), geo_lat DECIMAL(8,6), geo_long DECIMAL(9,6))");
-            runSQL(statement,
-                    "ALTER TABLE location ADD CONSTRAINT IF NOT EXISTS location_userid_fk FOREIGN KEY(userid) REFERENCES user(id)");
-            runSQL(statement,
-                    "ALTER TABLE location ALTER COLUMN userid SET NOT NULL");
-            runSQL(statement,
-                    "CREATE TABLE IF NOT EXISTS freelancer (id UUID PRIMARY KEY, jobtypeid UUID, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), password VARCHAR(32), address VARCHAR(512), geo_lat DECIMAL(8,6), geo_long DECIMAL(9,6), city VARCHAR(128), county VARCHAR(128), avg_rating INT, bank_name VARCHAR(128), account_number VARCHAR(128))");
-            runSQL(statement,
-                    "ALTER TABLE freelancer ALTER COLUMN jobtypeid SET NOT NULL");
-            runSQL(statement,
-                    "ALTER TABLE freelancer ADD CONSTRAINT IF NOT EXISTS freelancer_email_unique UNIQUE(email)");
-            runSQL(statement,
-                    "ALTER TABLE freelancer ADD CONSTRAINT IF NOT EXISTS freelancer_jobtypeid_fk FOREIGN KEY(jobtypeid) REFERENCES jobtype(id)");
-
-            runSQL(statement,
-                    "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, created TIMESTAMP, rating INT, jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID)");
-            runSQL(statement,
-                    "ALTER TABLE job ALTER COLUMN jobtypeid SET NOT NULL");
-            runSQL(statement,
-                    "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_jobtypeid_fk FOREIGN KEY(jobtypeid) REFERENCES jobtype(id)");
-
-            runSQL(statement,
-                    "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_freelancerid_fk FOREIGN KEY(freelancerid) REFERENCES freelancer(id)");
-
-            runSQL(statement,
-                    "ALTER TABLE job ALTER COLUMN locationid SET NOT NULL");
-            runSQL(statement,
-                    "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_locationid_fk FOREIGN KEY(locationid) REFERENCES location(id)");
-
-            runSQL(statement,
-                    "ALTER TABLE job ALTER COLUMN userid SET NOT NULL");
-            runSQL(statement,
-                    "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_userid_fk FOREIGN KEY(userid) REFERENCES user(id)");
+            runSqlTest(statement);
+            runSqlUser(statement);
+            runSqlJobType(statement);
+            runSqlLocation(statement);
+            runSqlFreelancer(statement);
+            runSqlJob(statement);
 
             statement.close();
         } catch (SQLException e) {
@@ -97,6 +60,68 @@ public class DataStoreProvider implements DataStore {
         } finally {
             dbm.releaseConnection(connection);
         }
+    }
+
+    private void runSqlTest(Statement statement) {
+        runSQL(statement,
+                "CREATE TABLE IF NOT EXISTS test (name VARCHAR PRIMARY KEY, value VARCHAR)");
+    }
+
+    private void runSqlFreelancer(Statement statement) {
+        runSQL(statement,
+                "CREATE TABLE IF NOT EXISTS freelancer (id UUID PRIMARY KEY, jobtypeid UUID, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), password VARCHAR(32), address VARCHAR(512), geo_lat DECIMAL(8,6), geo_long DECIMAL(9,6), city VARCHAR(128), county VARCHAR(128), avg_rating INT, bank_name VARCHAR(128), account_number VARCHAR(128))");
+        runSQL(statement,
+                "ALTER TABLE freelancer ALTER COLUMN jobtypeid SET NOT NULL");
+        runSQL(statement,
+                "ALTER TABLE freelancer ADD CONSTRAINT IF NOT EXISTS freelancer_email_unique UNIQUE(email)");
+        runSQL(statement,
+                "ALTER TABLE freelancer ADD CONSTRAINT IF NOT EXISTS freelancer_jobtypeid_fk FOREIGN KEY(jobtypeid) REFERENCES jobtype(id)");
+    }
+
+    private void runSqlJob(Statement statement) {
+        runSQL(statement,
+                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, created TIMESTAMP, rating INT, jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID)");
+        runSQL(statement,
+                "ALTER TABLE job ALTER COLUMN jobtypeid SET NOT NULL");
+        runSQL(statement,
+                "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_jobtypeid_fk FOREIGN KEY(jobtypeid) REFERENCES jobtype(id)");
+
+        runSQL(statement,
+                "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_freelancerid_fk FOREIGN KEY(freelancerid) REFERENCES freelancer(id)");
+
+        runSQL(statement,
+                "ALTER TABLE job ALTER COLUMN locationid SET NOT NULL");
+        runSQL(statement,
+                "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_locationid_fk FOREIGN KEY(locationid) REFERENCES location(id)");
+
+        runSQL(statement, "ALTER TABLE job ALTER COLUMN userid SET NOT NULL");
+        runSQL(statement,
+                "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_userid_fk FOREIGN KEY(userid) REFERENCES user(id)");
+    }
+
+    private void runSqlUser(Statement statement) {
+        runSQL(statement,
+                "CREATE TABLE IF NOT EXISTS user (id UUID PRIMARY KEY, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), password VARCHAR(32), role VARCHAR(32))");
+        runSQL(statement,
+                "ALTER TABLE user ADD CONSTRAINT IF NOT EXISTS user_email_unique UNIQUE(email)");
+    }
+
+    private void runSqlJobType(Statement statement) {
+        runSQL(statement,
+                "CREATE TABLE IF NOT EXISTS jobtype (id UUID PRIMARY KEY, name VARCHAR(64), description VARCHAR(512))");
+        runSQL(statement,
+                "ALTER TABLE jobtype ADD COLUMN IF NOT EXISTS commission decimal(4,2)");
+        runSQL(statement,
+                "UPDATE jobtype SET commission = 0.0 WHERE commission IS NULL");
+    }
+
+    private void runSqlLocation(Statement statement) {
+        runSQL(statement,
+                "CREATE TABLE IF NOT EXISTS location (id UUID PRIMARY KEY, userid UUID, address VARCHAR(512), city VARCHAR(128), geo_lat DECIMAL(8,6), geo_long DECIMAL(9,6))");
+        runSQL(statement,
+                "ALTER TABLE location ADD CONSTRAINT IF NOT EXISTS location_userid_fk FOREIGN KEY(userid) REFERENCES user(id)");
+        runSQL(statement,
+                "ALTER TABLE location ALTER COLUMN userid SET NOT NULL");
     }
 
     private void runSQL(Statement statement, String sql) {
@@ -203,6 +228,7 @@ public class DataStoreProvider implements DataStore {
             px.setObject(1, jobTypeId);
             px.setString(2, jobType.getName());
             px.setString(3, jobType.getDescription());
+            px.setBigDecimal(4, jobType.getCommission());
             px.execute();
             px.close();
             cx.commit();
@@ -227,7 +253,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, name, description FROM jobtype");
+                    "SELECT id, name, description, commission FROM jobtype");
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
                 jobTypes.add(getJobType(rs));
@@ -248,6 +274,7 @@ public class DataStoreProvider implements DataStore {
         jobType.setId((UUID) rs.getObject("id"));
         jobType.setName(rs.getString("name"));
         jobType.setDescription(rs.getString("description"));
+        jobType.setCommission(rs.getBigDecimal("commission"));
         return jobType;
     }
 
