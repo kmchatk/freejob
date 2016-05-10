@@ -286,7 +286,7 @@ public class DataStoreProvider implements DataStore {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO jobtype(id, name, description) " + values(3));
+                    "INSERT INTO jobtype(id, name, description) " + values(4));
             UUID jobTypeId = UUID.randomUUID();
             px.setObject(1, jobTypeId);
             px.setString(2, jobType.getName());
