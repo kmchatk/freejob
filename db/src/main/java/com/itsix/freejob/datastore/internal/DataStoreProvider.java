@@ -131,13 +131,15 @@ public class DataStoreProvider implements DataStore {
 
     private void runSqlLocation(Statement statement) {
         runSQL(statement,
-                "CREATE TABLE IF NOT EXISTS location (id UUID PRIMARY KEY, userid UUID, address VARCHAR(512), city VARCHAR(128), county VARCHAR(128), geo_lat DECIMAL(8,6), geo_long DECIMAL(9,6))");
+                "CREATE TABLE IF NOT EXISTS location (id UUID PRIMARY KEY, name VARCHAR(64), userid UUID, address VARCHAR(512), city VARCHAR(128), county VARCHAR(128), geo_lat DECIMAL(8,6), geo_long DECIMAL(9,6))");
         runSQL(statement,
                 "ALTER TABLE location ADD CONSTRAINT IF NOT EXISTS location_userid_fk FOREIGN KEY(userid) REFERENCES user(id)");
         runSQL(statement,
                 "ALTER TABLE location ALTER COLUMN userid SET NOT NULL");
         runSQL(statement,
                 "ALTER TABLE location ADD COLUMN IF NOT EXISTS county VARCHAR(128) AFTER city");
+        runSQL(statement,
+                "ALTER TABLE location ADD COLUMN IF NOT EXISTS name VARCHAR(64) AFTER id");
     }
 
     private void runSQL(Statement statement, String sql) {
@@ -505,16 +507,17 @@ public class DataStoreProvider implements DataStore {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO location(id, userid, address, city, county, geo_lat, geo_long) "
-                            + values(7));
+                    "INSERT INTO location(id, name, userid, address, city, county, geo_lat, geo_long) "
+                            + values(8));
             UUID locationId = UUID.randomUUID();
             px.setObject(1, locationId);
-            px.setObject(2, userId);
-            px.setString(3, location.getAddress());
-            px.setString(4, location.getCity());
-            px.setString(5, location.getCounty());
-            px.setBigDecimal(6, location.getLatitude());
-            px.setBigDecimal(7, location.getLongitude());
+            px.setString(2, location.getName());
+            px.setObject(3, userId);
+            px.setString(4, location.getAddress());
+            px.setString(5, location.getCity());
+            px.setString(6, location.getCounty());
+            px.setBigDecimal(7, location.getLatitude());
+            px.setBigDecimal(8, location.getLongitude());
 
             px.execute();
             px.close();
@@ -540,7 +543,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, userid, address, city, county, geo_lat, geo_long FROM location WHERE userid = ?");
+                    "SELECT id, name, userid, address, city, county, geo_lat, geo_long FROM location WHERE userid = ?");
             px.setObject(1, userId);
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
@@ -560,6 +563,7 @@ public class DataStoreProvider implements DataStore {
     private Location getLocation(ResultSet rs) throws SQLException {
         Location location = new Location();
         location.setId((UUID) rs.getObject("id"));
+        location.setName(rs.getString("name"));
         location.setUserId((UUID) rs.getObject("userid"));
         location.setAddress(rs.getString("address"));
         location.setCity(rs.getString("city"));

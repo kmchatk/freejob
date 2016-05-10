@@ -6,6 +6,7 @@ import java.util.UUID;
 public class Location {
 
     private UUID id;
+    private String name;
     private UUID userId;
     private String address;
     private String city;
@@ -23,6 +24,14 @@ public class Location {
 
     public UUID getUserId() {
         return userId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public void setUserId(UUID userId) {
