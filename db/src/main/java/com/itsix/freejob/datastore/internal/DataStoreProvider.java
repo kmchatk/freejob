@@ -19,6 +19,8 @@ import org.apache.felix.ipojo.annotations.Validate;
 import org.apache.log4j.Logger;
 
 import com.itsix.freejob.core.Freelancer;
+import com.itsix.freejob.core.Job;
+import com.itsix.freejob.core.Job.Status;
 import com.itsix.freejob.core.JobType;
 import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.Login;
@@ -81,7 +83,7 @@ public class DataStoreProvider implements DataStore {
 
     private void runSqlJob(Statement statement) {
         runSQL(statement,
-                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, created TIMESTAMP, rating INT, jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID)");
+                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, status VARCHAR(20), created BIGINT, rating INT, title varchar(120), description VARCHAR(4096), jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID)");
         runSQL(statement,
                 "ALTER TABLE job ALTER COLUMN jobtypeid SET NOT NULL");
         runSQL(statement,
@@ -98,6 +100,17 @@ public class DataStoreProvider implements DataStore {
         runSQL(statement, "ALTER TABLE job ALTER COLUMN userid SET NOT NULL");
         runSQL(statement,
                 "ALTER TABLE job ADD CONSTRAINT IF NOT EXISTS job_userid_fk FOREIGN KEY(userid) REFERENCES user(id)");
+
+        runSQL(statement,
+                "ALTER TABLE job ADD COLUMN IF NOT EXISTS status VARCHAR(20) AFTER id");
+
+        runSQL(statement,
+                "ALTER TABLE job ADD COLUMN IF NOT EXISTS title VARCHAR(120) AFTER rating");
+
+        runSQL(statement,
+                "ALTER TABLE job ADD COLUMN IF NOT EXISTS description VARCHAR(4096) AFTER title");
+
+        runSQL(statement, "ALTER TABLE job ALTER COLUMN created BIGINT");
     }
 
     private void runSqlUser(Statement statement) {
@@ -571,6 +584,86 @@ public class DataStoreProvider implements DataStore {
         } finally {
             dbm.releaseConnection(cx);
         }
+    }
+
+    @Override
+    public UUID createJob(UUID userId, Job job) throws WriteFailedException {
+        logger.debug("Creating job: " + job);
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            cx.setAutoCommit(false);
+            PreparedStatement px = cx.prepareStatement(
+                    "INSERT INTO job(id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid) "
+                            + values(10));
+            UUID jobId = UUID.randomUUID();
+            long created = System.currentTimeMillis();
+            px.setObject(1, jobId);
+            px.setString(2, job.getTitle());
+            px.setString(3, job.getDescription());
+            px.setString(4, Status.OPEN.name());
+            px.setLong(5, created);
+            px.setInt(6, job.getRating());
+            px.setObject(7, job.getJobTypeId());
+            px.setObject(8, job.getFreelancerId());
+            px.setObject(9, job.getLocationId());
+            px.setObject(10, userId);
+
+            px.execute();
+            px.close();
+            cx.commit();
+            return jobId;
+        } catch (SQLException e) {
+            logger.debug("Failed to insert job", e);
+            try {
+                cx.rollback();
+            } catch (SQLException e1) {
+                logger.debug("Failed to rollback transaction", e1);
+            }
+            throw new WriteFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+    }
+
+    @Override
+    public Collection<Job> listJobs(UUID jobTypeId, Status status) {
+        List<Job> jobs = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid FROM job WHERE jobtypeid = ? and status = ?");
+            px.setObject(1, jobTypeId);
+            px.setString(2, status.name());
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                jobs.add(getJob(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+
+            logger.warn("Failed to list jobs", e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return jobs;
+    }
+
+    private Job getJob(ResultSet rs) throws SQLException {
+        Job job = new Job();
+        job.setId((UUID) rs.getObject("id"));
+        job.setTitle(rs.getString("title"));
+        job.setDescription(rs.getString("description"));
+        job.setStatus(Status.valueOf(rs.getString("status")));
+        job.setCreated(rs.getLong("created"));
+        job.setRating(rs.getInt("rating"));
+        job.setJobTypeId((UUID) rs.getObject("jobtypeid"));
+        job.setFreelancerId((UUID) rs.getObject("freelancerid"));
+        job.setLocationId((UUID) rs.getObject("locationid"));
+        job.setUserId((UUID) rs.getObject("userid"));
+        return job;
     }
 
 }

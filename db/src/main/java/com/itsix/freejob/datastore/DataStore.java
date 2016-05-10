@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.UUID;
 
 import com.itsix.freejob.core.Freelancer;
+import com.itsix.freejob.core.Job;
+import com.itsix.freejob.core.Job.Status;
 import com.itsix.freejob.core.JobType;
 import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.Login;
@@ -33,10 +35,15 @@ public interface DataStore {
 
     Login login(String email, String password, Role role);
 
-    UUID createLocation(UUID userId, Location location) throws WriteFailedException;
+    UUID createLocation(UUID userId, Location location)
+            throws WriteFailedException;
 
     Collection<Location> listLocations(UUID userId);
 
     void deleteLocation(UUID locationId);
+
+    UUID createJob(UUID userId, Job job) throws WriteFailedException;
+
+    Collection<Job> listJobs(UUID jobTypeId, Status status);
 
 }

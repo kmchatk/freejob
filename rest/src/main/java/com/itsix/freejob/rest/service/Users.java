@@ -47,4 +47,9 @@ public class Users extends OsgiRestResource {
     public Locations getLocations(@Context ResourceContext rc) {
         return rc.getResource(Locations.class);
     }
+
+    @Path("{userId}/jobs")
+    public Jobs getJobs(@Context ResourceContext rc) {
+        return rc.getResource(Jobs.class);
+    }
 }

@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 
 import com.itsix.freejob.api.Api;
 import com.itsix.freejob.core.Freelancer;
+import com.itsix.freejob.core.Job;
 import com.itsix.freejob.core.JobType;
 import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.Login;
@@ -108,6 +109,11 @@ public class ApiProvider implements Api {
     @Override
     public void deleteLocation(UUID locationId) {
         ds.deleteLocation(locationId);
+    }
+
+    @Override
+    public UUID createJob(UUID userId, Job job) throws WriteFailedException {
+        return ds.createJob(userId, job);
     }
 
 }
