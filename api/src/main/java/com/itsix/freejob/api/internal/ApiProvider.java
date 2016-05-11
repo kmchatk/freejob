@@ -1,5 +1,6 @@
 package com.itsix.freejob.api.internal;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,6 +15,7 @@ import org.apache.log4j.Logger;
 import com.itsix.freejob.api.Api;
 import com.itsix.freejob.core.Freelancer;
 import com.itsix.freejob.core.Job;
+import com.itsix.freejob.core.Job.Status;
 import com.itsix.freejob.core.JobType;
 import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.Login;
@@ -114,6 +116,22 @@ public class ApiProvider implements Api {
     @Override
     public UUID createJob(UUID userId, Job job) throws WriteFailedException {
         return ds.createJob(userId, job);
+    }
+
+    @Override
+    public Collection<Job> listOpenJobs(UUID jobTypeId) {
+        return ds.listJobs(jobTypeId, Status.OPEN);
+    }
+
+    @Override
+    public Collection<Job> listOpenJobs(UUID jobTypeId, BigDecimal minLat,
+            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong) {
+        return ds.listJobs(jobTypeId, minLat, maxLat, minLong, maxLong);
+    }
+
+    @Override
+    public Collection<Job> listUserJobs(UUID userId) {
+        return ds.listJobs(userId);
     }
 
 }

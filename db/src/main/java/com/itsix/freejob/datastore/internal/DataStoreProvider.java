@@ -1,5 +1,6 @@
 package com.itsix.freejob.datastore.internal;
 
+import java.math.BigDecimal;
 import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -301,7 +302,8 @@ public class DataStoreProvider implements DataStore {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO jobtype(id, name, description) " + values(4));
+                    "INSERT INTO jobtype(id, name, description, commission) "
+                            + values(4));
             UUID jobTypeId = UUID.randomUUID();
             px.setObject(1, jobTypeId);
             px.setString(2, jobType.getName());
@@ -640,6 +642,59 @@ public class DataStoreProvider implements DataStore {
                     "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid FROM job WHERE jobtypeid = ? and status = ?");
             px.setObject(1, jobTypeId);
             px.setString(2, status.name());
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                jobs.add(getJob(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+
+            logger.warn("Failed to list jobs", e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return jobs;
+    }
+
+    @Override
+    public Collection<Job> listJobs(UUID jobTypeId, BigDecimal minLat,
+            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong) {
+        List<Job> jobs = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE jobtypeid = ? AND (l.geo_lat BETWEEN ? AND ?) AND (l.geo_long BETWEEN ? AND ?)");
+            px.setObject(1, jobTypeId);
+            px.setBigDecimal(2, minLat);
+            px.setBigDecimal(3, maxLat);
+            px.setBigDecimal(4, minLong);
+            px.setBigDecimal(5, maxLong);
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                jobs.add(getJob(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+
+            logger.warn("Failed to list jobs", e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return jobs;
+    }
+
+    @Override
+    public Collection<Job> listJobs(UUID userId) {
+        List<Job> jobs = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid FROM job WHERE userid = ?");
+            px.setObject(1, userId);
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
                 jobs.add(getJob(rs));

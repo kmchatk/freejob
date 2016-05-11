@@ -3,6 +3,7 @@ package com.itsix.freejob.rest.service;
 import java.util.UUID;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -23,4 +24,11 @@ public class Jobs extends OsgiRestResource {
         UUID jobId = getApi().createJob(userId, job);
         return Result.ok(jobId);
     }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result listUserJobs(@PathParam("userId") UUID userId) {
+        return Result.ok(getApi().listUserJobs(userId));
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.itsix.freejob.api;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.UUID;
 
@@ -45,5 +46,12 @@ public interface Api {
     void deleteLocation(UUID locationId);
 
     UUID createJob(UUID userId, Job job) throws WriteFailedException;
+
+    Collection<Job> listOpenJobs(UUID jobTypeId);
+
+    Collection<Job> listOpenJobs(UUID jobTypeId, BigDecimal minLat,
+            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong);
+
+    Collection<Job> listUserJobs(UUID userId);
 
 }

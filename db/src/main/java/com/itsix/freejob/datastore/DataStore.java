@@ -1,5 +1,6 @@
 package com.itsix.freejob.datastore;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.UUID;
 
@@ -45,5 +46,10 @@ public interface DataStore {
     UUID createJob(UUID userId, Job job) throws WriteFailedException;
 
     Collection<Job> listJobs(UUID jobTypeId, Status status);
+
+    Collection<Job> listJobs(UUID userId);
+
+    Collection<Job> listJobs(UUID jobTypeId, BigDecimal minLat,
+            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong);
 
 }
