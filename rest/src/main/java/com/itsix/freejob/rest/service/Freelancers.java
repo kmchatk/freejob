@@ -9,12 +9,16 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 
 import com.itsix.freejob.core.Freelancer;
+import com.itsix.freejob.core.exceptions.NotFoundException;
+import com.itsix.freejob.core.exceptions.ReadFailedException;
 import com.itsix.freejob.core.exceptions.WriteFailedException;
 import com.itsix.freejob.rest.OsgiRestResource;
 import com.itsix.freejob.rest.data.Result;
+import com.sun.jersey.api.core.ResourceContext;
 
 public class Freelancers extends OsgiRestResource {
 
@@ -33,13 +37,26 @@ public class Freelancers extends OsgiRestResource {
         return Result.ok(getApi().listFreelancers());
     }
 
+    @GET
+    @Path("{freelancerId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result editFreelancer(@PathParam("freelancerId") UUID freelancerId)
+            throws NotFoundException, ReadFailedException {
+        return Result.ok(getApi().editFreelancer(freelancerId));
+    }
+
     @DELETE
     @Path("{freelancerId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Result deleteFreelancer(
-            @PathParam("freelancerId") UUID freelancerId) {
+    public Result deleteFreelancer(@PathParam("freelancerId") UUID freelancerId)
+            throws WriteFailedException {
         getApi().deleteFreelancer(freelancerId);
         return Result.ok();
+    }
+
+    @Path("{freelancerId}/jobs")
+    public Jobs getJobs(@Context ResourceContext rc) {
+        return rc.getResource(Jobs.class);
     }
 
 }

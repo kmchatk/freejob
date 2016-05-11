@@ -13,6 +13,9 @@ import javax.ws.rs.core.MediaType;
 
 import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.exceptions.FreeJobException;
+import com.itsix.freejob.core.exceptions.NotFoundException;
+import com.itsix.freejob.core.exceptions.ReadFailedException;
+import com.itsix.freejob.core.exceptions.WriteFailedException;
 import com.itsix.freejob.rest.OsgiRestResource;
 import com.itsix.freejob.rest.data.Result;
 
@@ -33,10 +36,20 @@ public class Locations extends OsgiRestResource {
         return Result.ok(getApi().listLocations(userId));
     }
 
+    @GET
+    @Path("{locationId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result editLocation(@PathParam("userId") UUID userId,
+            @PathParam("locationId") UUID locationId)
+                    throws NotFoundException, ReadFailedException {
+        return Result.ok(getApi().editLocation(userId, locationId));
+    }
+
     @DELETE
     @Path("{locationId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Result deleteLocation(@PathParam("locationId") UUID locationId) {
+    public Result deleteLocation(@PathParam("locationId") UUID locationId)
+            throws WriteFailedException {
         getApi().deleteLocation(locationId);
         return Result.ok();
     }

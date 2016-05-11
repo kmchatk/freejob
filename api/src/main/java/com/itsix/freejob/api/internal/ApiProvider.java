@@ -23,6 +23,8 @@ import com.itsix.freejob.core.Role;
 import com.itsix.freejob.core.Session;
 import com.itsix.freejob.core.User;
 import com.itsix.freejob.core.exceptions.LoginFailedException;
+import com.itsix.freejob.core.exceptions.NotFoundException;
+import com.itsix.freejob.core.exceptions.ReadFailedException;
 import com.itsix.freejob.core.exceptions.WriteFailedException;
 import com.itsix.freejob.datastore.DataStore;
 
@@ -49,7 +51,7 @@ public class ApiProvider implements Api {
     }
 
     @Override
-    public void deleteUser(UUID userId) {
+    public void deleteUser(UUID userId) throws WriteFailedException {
         ds.deleteUser(userId);
     }
 
@@ -64,13 +66,14 @@ public class ApiProvider implements Api {
     }
 
     @Override
-    public void deleteFreelancer(UUID freelancerId) {
+    public void deleteFreelancer(UUID freelancerId)
+            throws WriteFailedException {
         ds.deleteFreelancer(freelancerId);
     }
 
     @Override
     public Session login(String email, String password, Role role)
-            throws LoginFailedException {
+            throws LoginFailedException, ReadFailedException {
         Login user = ds.login(email, password, role);
         if (user == null) {
             throw new LoginFailedException();
@@ -93,7 +96,7 @@ public class ApiProvider implements Api {
     }
 
     @Override
-    public void deleteJobType(UUID jobTypeId) {
+    public void deleteJobType(UUID jobTypeId) throws WriteFailedException {
         ds.deleteJobType(jobTypeId);
     }
 
@@ -109,7 +112,7 @@ public class ApiProvider implements Api {
     }
 
     @Override
-    public void deleteLocation(UUID locationId) {
+    public void deleteLocation(UUID locationId) throws WriteFailedException {
         ds.deleteLocation(locationId);
     }
 
@@ -120,18 +123,54 @@ public class ApiProvider implements Api {
 
     @Override
     public Collection<Job> listOpenJobs(UUID jobTypeId) {
-        return ds.listJobs(jobTypeId, Status.OPEN);
+        return ds.listJobsByType(jobTypeId, Status.OPEN);
     }
 
     @Override
     public Collection<Job> listOpenJobs(UUID jobTypeId, BigDecimal minLat,
             BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong) {
-        return ds.listJobs(jobTypeId, minLat, maxLat, minLong, maxLong);
+        return ds.listJobsByType(jobTypeId, minLat, maxLat, minLong, maxLong);
     }
 
     @Override
-    public Collection<Job> listUserJobs(UUID userId) {
-        return ds.listJobs(userId);
+    public Collection<Job> listUserJobs(UUID userId, Status status) {
+        return ds.listUserJobs(userId, status);
+    }
+
+    @Override
+    public Collection<Job> listFreelancerJobs(UUID freelancerId,
+            Status status) {
+        return ds.listFreelancerJobs(freelancerId, status);
+    }
+
+    @Override
+    public Job editJob(UUID jobId)
+            throws NotFoundException, ReadFailedException {
+        return ds.editJob(jobId);
+    }
+
+    @Override
+    public Location editLocation(UUID userId, UUID locationId)
+            throws NotFoundException, ReadFailedException {
+        return ds.editLocation(userId, locationId);
+    }
+
+    @Override
+    public Freelancer editFreelancer(UUID freelancerId)
+            throws NotFoundException, ReadFailedException {
+        return ds.editFreelancer(freelancerId);
+    }
+
+    @Override
+    public JobType editJobType(UUID jobTypeId)
+            throws NotFoundException, ReadFailedException {
+        return ds.editJobType(jobTypeId);
+    }
+
+    @Override
+    public User editUser(UUID userId)
+            throws NotFoundException, ReadFailedException {
+        return ds.editUser(userId);
     }
 
 }

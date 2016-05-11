@@ -14,6 +14,9 @@ import javax.ws.rs.core.MediaType;
 
 import com.itsix.freejob.core.User;
 import com.itsix.freejob.core.exceptions.FreeJobException;
+import com.itsix.freejob.core.exceptions.NotFoundException;
+import com.itsix.freejob.core.exceptions.ReadFailedException;
+import com.itsix.freejob.core.exceptions.WriteFailedException;
 import com.itsix.freejob.rest.OsgiRestResource;
 import com.itsix.freejob.rest.data.Result;
 import com.sun.jersey.api.core.ResourceContext;
@@ -35,10 +38,19 @@ public class Users extends OsgiRestResource {
         return Result.ok(getApi().listUsers());
     }
 
+    @GET
+    @Path("{userId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result editUser(@PathParam("userId") UUID userId)
+            throws NotFoundException, ReadFailedException {
+        return Result.ok(getApi().editUser(userId));
+    }
+
     @DELETE
     @Path("{userId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Result deleteUser(@PathParam("userId") UUID userId) {
+    public Result deleteUser(@PathParam("userId") UUID userId)
+            throws WriteFailedException {
         getApi().deleteUser(userId);
         return Result.ok();
     }

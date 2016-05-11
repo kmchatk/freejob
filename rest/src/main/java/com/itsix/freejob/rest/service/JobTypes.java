@@ -15,6 +15,9 @@ import javax.ws.rs.core.MediaType;
 
 import com.itsix.freejob.core.JobType;
 import com.itsix.freejob.core.exceptions.FreeJobException;
+import com.itsix.freejob.core.exceptions.NotFoundException;
+import com.itsix.freejob.core.exceptions.ReadFailedException;
+import com.itsix.freejob.core.exceptions.WriteFailedException;
 import com.itsix.freejob.rest.OsgiRestResource;
 import com.itsix.freejob.rest.data.Result;
 
@@ -37,10 +40,19 @@ public class JobTypes extends OsgiRestResource {
         return Result.ok(getApi().listJobTypes());
     }
 
+    @GET
+    @Path("{jobTypeId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result editJobType(@PathParam("jobTypeId") UUID jobTypeId)
+            throws NotFoundException, ReadFailedException {
+        return Result.ok(getApi().editJobType(jobTypeId));
+    }
+
     @DELETE
     @Path("{jobTypeId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Result deleteJobType(@PathParam("jobTypeId") UUID jobTypeId) {
+    public Result deleteJobType(@PathParam("jobTypeId") UUID jobTypeId)
+            throws WriteFailedException {
         getApi().deleteJobType(jobTypeId);
         return Result.ok();
     }
