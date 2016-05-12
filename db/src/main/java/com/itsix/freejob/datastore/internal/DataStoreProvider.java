@@ -811,7 +811,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid, netamount, total FROM job WHERE id = ?");
+                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.id = ?");
             px.setObject(1, jobId);
             ResultSet rs = px.executeQuery();
             if (rs.next()) {

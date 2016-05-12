@@ -60,7 +60,7 @@ public class Jobs extends OsgiRestResource {
     }
 
     @GET
-    @Path("jobId")
+    @Path("{jobId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Result editJob(@PathParam("jobId") UUID jobId)
             throws NotFoundException, ReadFailedException {
