@@ -22,6 +22,8 @@ public class Job {
     private BigDecimal netAmount;
     private BigDecimal total;
     private String message;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
 
     public UUID getId() {
         return id;
@@ -125,6 +127,22 @@ public class Job {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public BigDecimal getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(BigDecimal latitude) {
+        this.latitude = latitude;
+    }
+
+    public BigDecimal getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(BigDecimal longitude) {
+        this.longitude = longitude;
     }
 
 }
