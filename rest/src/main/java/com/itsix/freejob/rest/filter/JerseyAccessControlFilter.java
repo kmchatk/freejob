@@ -12,22 +12,15 @@ public class JerseyAccessControlFilter implements ContainerResponseFilter {
 
     public ContainerResponse filter(ContainerRequest request,
             ContainerResponse response) {
-        response.getHttpHeaders().add("Access-Control-Allow-Origin", //$NON-NLS-1$
-                "*"); //$NON-NLS-1$
+        response.getHttpHeaders().add("Access-Control-Allow-Origin", "*");
         String requestHeaders = request
                 .getHeaderValue("Access-Control-Request-Headers");
         if (requestHeaders != null) {
             response.getHttpHeaders().add("Access-Control-Allow-Headers",
                     requestHeaders);
         }
-        response.getHttpHeaders().add("Access-Control-Allow-Methods", //$NON-NLS-1$
-                "GET, POST, PUT, DELETE, OPTIONS"); //$NON-NLS-1$
-
-        //        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) { //$NON-NLS-1$
-        //            response.getHttpHeaders().add(
-        //                    "Access-Control-Allow-Credentials", "true"); //$NON-NLS-1$ //$NON-NLS-2$
-        //        }
-        //        
+        response.getHttpHeaders().add("Access-Control-Allow-Methods",
+                "GET, POST, PUT, DELETE, OPTIONS");
         return response;
     }
 }

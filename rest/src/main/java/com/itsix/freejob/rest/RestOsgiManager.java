@@ -27,19 +27,10 @@ public class RestOsgiManager {
     @Requires(optional = true)
     private WebContainer webContainer;
 
-    //    private HttpContext defaultHttpContext;
     private ServletContainer servletContainer;
 
     @Validate
     public void start() {
-        //        try {
-        //            Collection<Shape> shapes = paintApi.listShapes();
-        //            System.out.println("There are currently " + shapes.size()
-        //                    + " shapes available");
-        //        } catch (RuntimeException e) {
-        //            System.out.println("Paint API is not currently available");
-        //        }
-
         HttpContext defaultHttpContext = webContainer
                 .createDefaultHttpContext();
         servletContainer = new ServletContainer();
