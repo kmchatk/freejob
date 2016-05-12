@@ -31,9 +31,18 @@ public class Freelancers extends OsgiRestResource {
         return Result.ok(freelancerId);
     }
 
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result saveFreelancer(Freelancer freelancer)
+            throws WriteFailedException {
+        UUID freelancerId = getApi().saveFreelancer(freelancer);
+        return Result.ok(freelancerId);
+    }
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Result listFreelancers() {
+    public Result listFreelancers() throws ReadFailedException {
         return Result.ok(getApi().listFreelancers());
     }
 
@@ -57,6 +66,11 @@ public class Freelancers extends OsgiRestResource {
     @Path("{freelancerId}/jobs")
     public Jobs getJobs(@Context ResourceContext rc) {
         return rc.getResource(Jobs.class);
+    }
+
+    @Path("{freelancerId}/subscriptions")
+    public Subscriptions getSubscriptions(@Context ResourceContext rc) {
+        return rc.getResource(Subscriptions.class);
     }
 
 }

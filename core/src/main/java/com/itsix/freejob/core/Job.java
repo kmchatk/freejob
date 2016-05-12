@@ -1,5 +1,6 @@
 package com.itsix.freejob.core;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public class Job {
@@ -18,6 +19,8 @@ public class Job {
     private UUID freelancerId;
     private UUID userId;
     private UUID locationId;
+    private BigDecimal netAmount;
+    private BigDecimal total;
 
     public UUID getId() {
         return id;
@@ -98,4 +101,21 @@ public class Job {
     public void setLocationId(UUID locationId) {
         this.locationId = locationId;
     }
+
+    public BigDecimal getNetAmount() {
+        return netAmount;
+    }
+
+    public void setNetAmount(BigDecimal netAmount) {
+        this.netAmount = netAmount;
+    }
+
+    public BigDecimal getTotal() {
+        return total;
+    }
+
+    public void setTotal(BigDecimal total) {
+        this.total = total;
+    }
+
 }

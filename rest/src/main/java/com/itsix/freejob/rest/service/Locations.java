@@ -24,15 +24,16 @@ public class Locations extends OsgiRestResource {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Result createLocation(@PathParam("userId") UUID userId,
+    public Result saveLocation(@PathParam("userId") UUID userId,
             Location location) throws FreeJobException {
-        UUID locationId = getApi().createLocation(userId, location);
+        UUID locationId = getApi().saveLocation(userId, location);
         return Result.ok(locationId);
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Result listLocations(@PathParam("userId") UUID userId) {
+    public Result listLocations(@PathParam("userId") UUID userId)
+            throws ReadFailedException {
         return Result.ok(getApi().listLocations(userId));
     }
 

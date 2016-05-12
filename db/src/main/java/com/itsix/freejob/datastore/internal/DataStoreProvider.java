@@ -26,6 +26,7 @@ import com.itsix.freejob.core.JobType;
 import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.Login;
 import com.itsix.freejob.core.Role;
+import com.itsix.freejob.core.Subscription;
 import com.itsix.freejob.core.User;
 import com.itsix.freejob.core.exceptions.NotFoundException;
 import com.itsix.freejob.core.exceptions.ReadFailedException;
@@ -59,7 +60,7 @@ public class DataStoreProvider implements DataStore {
             runSqlLocation(statement);
             runSqlFreelancer(statement);
             runSqlJob(statement);
-
+            runSqlSubscription(statement);
             statement.close();
         } catch (SQLException e) {
             logger.error("Could not initialize datastore", e);
@@ -86,7 +87,7 @@ public class DataStoreProvider implements DataStore {
 
     private void runSqlJob(Statement statement) {
         runSQL(statement,
-                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, status VARCHAR(20), created BIGINT, rating INT, title varchar(120), description VARCHAR(4096), jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID)");
+                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, status VARCHAR(20), created BIGINT, rating INT, title varchar(120), description VARCHAR(4096), jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID, netamount DECIMAL(10,2), total DECIMAL(10,2)");
         runSQL(statement,
                 "ALTER TABLE job ALTER COLUMN jobtypeid SET NOT NULL");
         runSQL(statement,
@@ -114,6 +115,11 @@ public class DataStoreProvider implements DataStore {
                 "ALTER TABLE job ADD COLUMN IF NOT EXISTS description VARCHAR(4096) AFTER title");
 
         runSQL(statement, "ALTER TABLE job ALTER COLUMN created BIGINT");
+
+        runSQL(statement,
+                "ALTER TABLE job ADD COLUMN IF NOT EXISTS netamount DECIMAL(10,2)");
+        runSQL(statement,
+                "ALTER TABLE job ADD COLUMN IF NOT EXISTS total DECIMAL(10,2)");
     }
 
     private void runSqlUser(Statement statement) {
@@ -145,6 +151,15 @@ public class DataStoreProvider implements DataStore {
                 "ALTER TABLE location ADD COLUMN IF NOT EXISTS name VARCHAR(64) AFTER id");
     }
 
+    private void runSqlSubscription(Statement statement) {
+        runSQL(statement,
+                "CREATE TABLE IF NOT EXISTS subscription (jobid UUID, freelancerid UUID, message VARCHAR(4096), PRIMARY KEY(jobid, freelancerid))");
+        runSQL(statement,
+                "ALTER TABLE subscription ADD CONSTRAINT IF NOT EXISTS subscription_jobid_fk FOREIGN KEY(jobid) REFERENCES job(id)");
+        runSQL(statement,
+                "ALTER TABLE subscription ADD CONSTRAINT IF NOT EXISTS subscription_freelancerid_fk FOREIGN KEY(freelancerid) REFERENCES freelancer(id)");
+    }
+
     private void runSQL(Statement statement, String sql) {
         try {
             statement.execute(sql);
@@ -154,34 +169,44 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public UUID createUser(Login user) throws WriteFailedException {
-        logger.debug("Creating user: " + user);
+    public UUID saveUser(User user) throws WriteFailedException {
+        logger.debug("Save user: " + user);
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO user(id, firstname, lastname, email, password, role) "
-                            + values(6));
-            UUID userId = UUID.randomUUID();
+                    "MERGE INTO user(id, firstname, lastname, email, role) "
+                            + values(5));
+            UUID userId = user.getId();
+            if (userId == null) {
+                userId = UUID.randomUUID();
+            }
             px.setObject(1, userId);
             px.setString(2, user.getFirstName());
             px.setString(3, user.getLastName());
             px.setString(4, user.getEmail());
-            px.setString(5, md5(user.getPassword()));
-            px.setString(6, Role.CUSTOMER.name());
+            px.setString(5, Role.CUSTOMER.name());
             px.execute();
             px.close();
+            if (user.getPassword() != null) {
+                px = cx.prepareStatement(
+                        "UPDATE user SET password = ? where id = ?");
+                px.setString(1, md5(user.getPassword()));
+                px.setObject(2, userId);
+                px.execute();
+                px.close();
+            }
             cx.commit();
             return userId;
         } catch (SQLException e) {
-            logger.debug("Failed to create user", e);
+            logger.debug("Failed to save user", e);
             try {
                 cx.rollback();
             } catch (SQLException e1) {
                 logger.debug("Failed to rollback transaction", e1);
             }
-            throw new WriteFailedException("Failed to create user", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -214,7 +239,7 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public Collection<User> listUsers() {
+    public Collection<User> listUsers() throws ReadFailedException {
         List<User> users = new LinkedList<>();
         Connection cx = null;
         try {
@@ -229,6 +254,7 @@ public class DataStoreProvider implements DataStore {
             px.close();
         } catch (SQLException e) {
             logger.warn("Failed to list users", e);
+            throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -257,7 +283,7 @@ public class DataStoreProvider implements DataStore {
             px.close();
         } catch (java.sql.SQLException e) {
             logger.warn("Failed to delete user", e);
-            throw new WriteFailedException("Failed to delete user", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -327,16 +353,19 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public UUID createJobType(JobType jobType) throws WriteFailedException {
-        logger.debug("Creating job type: " + jobType);
+    public UUID saveJobType(JobType jobType) throws WriteFailedException {
+        logger.debug("Save job type: " + jobType);
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO jobtype(id, name, description, commission) "
+                    "MERGE INTO jobtype(id, name, description, commission) "
                             + values(4));
-            UUID jobTypeId = UUID.randomUUID();
+            UUID jobTypeId = jobType.getId();
+            if (jobTypeId == null) {
+                jobTypeId = UUID.randomUUID();
+            }
             px.setObject(1, jobTypeId);
             px.setString(2, jobType.getName());
             px.setString(3, jobType.getDescription());
@@ -352,14 +381,14 @@ public class DataStoreProvider implements DataStore {
             } catch (SQLException e1) {
                 logger.debug("Failed to rollback transaction", e1);
             }
-            throw new WriteFailedException("Failed to create job type", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
     }
 
     @Override
-    public Collection<JobType> listJobTypes() {
+    public Collection<JobType> listJobTypes() throws ReadFailedException {
         List<JobType> jobTypes = new LinkedList<>();
         Connection cx = null;
         try {
@@ -373,8 +402,8 @@ public class DataStoreProvider implements DataStore {
             rs.close();
             px.close();
         } catch (SQLException e) {
-
             logger.warn("Failed to list job types", e);
+            throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -430,58 +459,69 @@ public class DataStoreProvider implements DataStore {
             px.close();
         } catch (java.sql.SQLException e) {
             logger.warn("Failed to delete job type", e);
-            throw new WriteFailedException("Failed to delete job type", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
     }
 
     @Override
-    public UUID createFreelancer(Freelancer freelancer)
+    public UUID saveFreelancer(Freelancer freelancer)
             throws WriteFailedException {
-        logger.debug("Creating freelancer: " + freelancer);
+        logger.debug("Updating freelancer: " + freelancer);
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO freelancer(id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number) "
-                            + values(14));
-            UUID freelancerId = UUID.randomUUID();
+                    "MERGE INTO freelancer(id, jobtypeid, firstname, lastname, email, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number) "
+                            + values(13));
+            UUID freelancerId = freelancer.getId();
+            if (freelancerId == null) {
+                freelancerId = UUID.randomUUID();
+            }
             px.setObject(1, freelancerId);
             px.setObject(2, freelancer.getJobTypeId());
             px.setString(3, freelancer.getFirstName());
             px.setString(4, freelancer.getLastName());
             px.setString(5, freelancer.getEmail());
-            px.setString(6, md5(freelancer.getPassword()));
-            px.setString(7, freelancer.getAddress());
-            px.setBigDecimal(8, freelancer.getLatitude());
-            px.setBigDecimal(9, freelancer.getLongitude());
-            px.setString(10, freelancer.getCity());
-            px.setString(11, freelancer.getCounty());
-            px.setInt(12, freelancer.getAvgRating());
-            px.setString(13, freelancer.getBankName());
-            px.setString(14, freelancer.getAccountNumber());
+            px.setString(6, freelancer.getAddress());
+            px.setBigDecimal(7, freelancer.getLatitude());
+            px.setBigDecimal(8, freelancer.getLongitude());
+            px.setString(9, freelancer.getCity());
+            px.setString(10, freelancer.getCounty());
+            px.setInt(11, freelancer.getAvgRating());
+            px.setString(12, freelancer.getBankName());
+            px.setString(13, freelancer.getAccountNumber());
 
             px.execute();
             px.close();
+
+            if (freelancer.getPassword() != null) {
+                px = cx.prepareStatement(
+                        "UPDATE freelancer SET password = ? where id = ?");
+                px.setString(1, md5(freelancer.getPassword()));
+                px.setObject(2, freelancerId);
+                px.execute();
+                px.close();
+            }
             cx.commit();
             return freelancerId;
         } catch (SQLException e) {
-            logger.debug("Failed to create freelancer", e);
+            logger.debug("Failed to save freelancer", e);
             try {
                 cx.rollback();
             } catch (SQLException e1) {
                 logger.debug("Failed to rollback transaction", e1);
             }
-            throw new WriteFailedException("Failed to create freelancer", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
     }
 
     @Override
-    public Collection<Freelancer> listFreelancers() {
+    public Collection<Freelancer> listFreelancers() throws ReadFailedException {
         List<Freelancer> freelancers = new LinkedList<>();
         Connection cx = null;
         try {
@@ -495,8 +535,8 @@ public class DataStoreProvider implements DataStore {
             rs.close();
             px.close();
         } catch (SQLException e) {
-
             logger.warn("Failed to list freelancers", e);
+            throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -586,14 +626,14 @@ public class DataStoreProvider implements DataStore {
             px.close();
         } catch (java.sql.SQLException e) {
             logger.warn("Failed to delete freelancer", e);
-            throw new WriteFailedException("Failed to delete freelancer", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
     }
 
     @Override
-    public UUID createLocation(UUID userId, Location location)
+    public UUID saveLocation(UUID userId, Location location)
             throws WriteFailedException {
         logger.debug("Creating location: " + location);
         Connection cx = null;
@@ -601,9 +641,12 @@ public class DataStoreProvider implements DataStore {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO location(id, name, userid, address, city, county, geo_lat, geo_long) "
+                    "MERGE INTO location(id, name, userid, address, city, county, geo_lat, geo_long) "
                             + values(8));
-            UUID locationId = UUID.randomUUID();
+            UUID locationId = location.getId();
+            if (locationId == null) {
+                locationId = UUID.randomUUID();
+            }
             px.setObject(1, locationId);
             px.setString(2, location.getName());
             px.setObject(3, userId);
@@ -618,20 +661,21 @@ public class DataStoreProvider implements DataStore {
             cx.commit();
             return locationId;
         } catch (SQLException e) {
-            logger.debug("Failed to create location", e);
+            logger.debug("Failed to save location", e);
             try {
                 cx.rollback();
             } catch (SQLException e1) {
                 logger.debug("Failed to rollback transaction", e1);
             }
-            throw new WriteFailedException("Failed to create location", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
     }
 
     @Override
-    public Collection<Location> listLocations(UUID userId) {
+    public Collection<Location> listLocations(UUID userId)
+            throws ReadFailedException {
         List<Location> locations = new LinkedList<>();
         Connection cx = null;
         try {
@@ -646,8 +690,8 @@ public class DataStoreProvider implements DataStore {
             rs.close();
             px.close();
         } catch (SQLException e) {
-
             logger.warn("Failed to list locations", e);
+            throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -708,23 +752,26 @@ public class DataStoreProvider implements DataStore {
             px.close();
         } catch (java.sql.SQLException e) {
             logger.warn("Failed to delete location", e);
-            throw new WriteFailedException("Failed to delete location", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
     }
 
     @Override
-    public UUID createJob(UUID userId, Job job) throws WriteFailedException {
+    public UUID saveJob(UUID userId, Job job) throws WriteFailedException {
         logger.debug("Creating job: " + job);
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "INSERT INTO job(id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid) "
-                            + values(10));
-            UUID jobId = UUID.randomUUID();
+                    "MERGE INTO job(id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid, netamount, total) "
+                            + values(12));
+            UUID jobId = job.getId();
+            if (jobId == null) {
+                jobId = UUID.randomUUID();
+            }
             long created = System.currentTimeMillis();
             px.setObject(1, jobId);
             px.setString(2, job.getTitle());
@@ -736,6 +783,8 @@ public class DataStoreProvider implements DataStore {
             px.setObject(8, job.getFreelancerId());
             px.setObject(9, job.getLocationId());
             px.setObject(10, userId);
+            px.setBigDecimal(11, job.getNetAmount());
+            px.setBigDecimal(12, job.getTotal());
 
             px.execute();
             px.close();
@@ -748,7 +797,7 @@ public class DataStoreProvider implements DataStore {
             } catch (SQLException e1) {
                 logger.debug("Failed to rollback transaction", e1);
             }
-            throw new WriteFailedException("Failed to create job", e);
+            throw new WriteFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -762,7 +811,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid FROM job WHERE id = ?");
+                    "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid, netamount, total FROM job WHERE id = ?");
             px.setObject(1, jobId);
             ResultSet rs = px.executeQuery();
             if (rs.next()) {
@@ -783,13 +832,14 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public Collection<Job> listJobsByType(UUID jobTypeId, Status status) {
+    public Collection<Job> listJobsByType(UUID jobTypeId, Status status)
+            throws ReadFailedException {
         List<Job> jobs = new LinkedList<>();
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid FROM job WHERE jobtypeid = ? and status = ?");
+                    "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid, netamount, total FROM job WHERE jobtypeid = ? and status = ?");
             px.setObject(1, jobTypeId);
             px.setString(2, status.name());
             ResultSet rs = px.executeQuery();
@@ -799,8 +849,8 @@ public class DataStoreProvider implements DataStore {
             rs.close();
             px.close();
         } catch (SQLException e) {
-
             logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -809,13 +859,14 @@ public class DataStoreProvider implements DataStore {
 
     @Override
     public Collection<Job> listJobsByType(UUID jobTypeId, BigDecimal minLat,
-            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong) {
+            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong)
+                    throws ReadFailedException {
         List<Job> jobs = new LinkedList<>();
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE jobtypeid = ? AND (l.geo_lat BETWEEN ? AND ?) AND (l.geo_long BETWEEN ? AND ?)");
+                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE jobtypeid = ? AND (l.geo_lat BETWEEN ? AND ?) AND (l.geo_long BETWEEN ? AND ?)");
             px.setObject(1, jobTypeId);
             px.setBigDecimal(2, minLat);
             px.setBigDecimal(3, maxLat);
@@ -828,8 +879,8 @@ public class DataStoreProvider implements DataStore {
             rs.close();
             px.close();
         } catch (SQLException e) {
-
             logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -837,12 +888,13 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public Collection<Job> listUserJobs(UUID userId, Status status) {
+    public Collection<Job> listUserJobs(UUID userId, Status status)
+            throws ReadFailedException {
         List<Job> jobs = new LinkedList<>();
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid FROM job WHERE userid = ? ";
+            String sql = "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid, netamount, total FROM job WHERE userid = ? ";
             if (status != null) {
                 sql += "and status = ?";
             }
@@ -858,8 +910,8 @@ public class DataStoreProvider implements DataStore {
             rs.close();
             px.close();
         } catch (SQLException e) {
-
             logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -867,13 +919,13 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public Collection<Job> listFreelancerJobs(UUID freelancerId,
-            Status status) {
+    public Collection<Job> listFreelancerJobs(UUID freelancerId, Status status)
+            throws ReadFailedException {
         List<Job> jobs = new LinkedList<>();
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid FROM job WHERE freelancerid = ? ";
+            String sql = "SELECT id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid, netamount, total FROM job WHERE freelancerid = ? ";
             if (status != null) {
                 sql += "and status = ?";
             }
@@ -889,8 +941,8 @@ public class DataStoreProvider implements DataStore {
             rs.close();
             px.close();
         } catch (SQLException e) {
-
             logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
         }
@@ -909,7 +961,137 @@ public class DataStoreProvider implements DataStore {
         job.setFreelancerId((UUID) rs.getObject("freelancerid"));
         job.setLocationId((UUID) rs.getObject("locationid"));
         job.setUserId((UUID) rs.getObject("userid"));
+        job.setNetAmount(rs.getBigDecimal("netamount"));
+        job.setTotal(rs.getBigDecimal("total"));
         return job;
+    }
+
+    @Override
+    public void deleteJob(UUID jobId) throws WriteFailedException {
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx
+                    .prepareStatement("DELETE FROM job WHERE id = ?");
+            px.setObject(1, jobId);
+            px.executeUpdate();
+            px.close();
+        } catch (java.sql.SQLException e) {
+            logger.warn("Failed to delete job", e);
+            throw new WriteFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+    }
+
+    @Override
+    public void saveSubscription(UUID freelancerId, UUID jobId, String message)
+            throws WriteFailedException {
+        logger.debug("Saving subscription: [freelancerId=" + freelancerId
+                + ",jobId=" + jobId);
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            cx.setAutoCommit(false);
+            PreparedStatement px = cx.prepareStatement(
+                    "MERGE INTO subscription(jobid, freelancerid, message) "
+                            + values(3));
+            px.setObject(1, jobId);
+            px.setObject(2, freelancerId);
+            px.setString(3, message);
+
+            px.execute();
+            px.close();
+            cx.commit();
+        } catch (SQLException e) {
+            logger.debug("Failed to create subscription", e);
+            try {
+                cx.rollback();
+            } catch (SQLException e1) {
+                logger.debug("Failed to rollback transaction", e1);
+            }
+            throw new WriteFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+    }
+
+    @Override
+    public Collection<Subscription> listJobSubscriptions(UUID jobId)
+            throws ReadFailedException {
+        List<Subscription> subscriptions = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            String sql = "SELECT jobid, freelancerid, message from subscription WHERE jobid = ? ";
+            PreparedStatement px = cx.prepareStatement(sql);
+            px.setObject(1, jobId);
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                subscriptions.add(getSubscription(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+            logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return subscriptions;
+    }
+
+    @Override
+    public Collection<Subscription> listFreelancerSubscriptions(
+            UUID freelancerId) throws ReadFailedException {
+        List<Subscription> subscriptions = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            String sql = "SELECT jobid, freelancerid, message from subscription WHERE freelancerid = ? ";
+            PreparedStatement px = cx.prepareStatement(sql);
+            px.setObject(1, freelancerId);
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                subscriptions.add(getSubscription(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+            logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return subscriptions;
+    }
+
+    private Subscription getSubscription(ResultSet rs) throws SQLException {
+        Subscription subscription = new Subscription();
+        subscription.setJobId((UUID) rs.getObject("jobid"));
+        subscription.setFreelancerId((UUID) rs.getObject("freelancerid"));
+        subscription.setMessage(rs.getString("jobid"));
+        return subscription;
+    }
+
+    @Override
+    public void deleteSubscription(UUID freelancerId, UUID jobId)
+            throws WriteFailedException {
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "DELETE FROM subscription WHERE jobid = ? and freelancerid = ?");
+            px.setObject(1, jobId);
+            px.setObject(2, freelancerId);
+            px.executeUpdate();
+            px.close();
+        } catch (java.sql.SQLException e) {
+            logger.warn("Failed to delete subscription", e);
+            throw new WriteFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
     }
 
 }

@@ -30,13 +30,13 @@ public class JobTypes extends OsgiRestResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Result saveJobType(JobType jobType) throws FreeJobException {
-        UUID jobTypeId = getApi().createJobType(jobType);
+        UUID jobTypeId = getApi().saveJobType(jobType);
         return Result.ok(jobTypeId);
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Result listJobTypes() {
+    public Result listJobTypes() throws ReadFailedException {
         return Result.ok(getApi().listJobTypes());
     }
 
@@ -60,7 +60,8 @@ public class JobTypes extends OsgiRestResource {
     @GET
     @Path("{jobTypeId}/jobs")
     @Produces(MediaType.APPLICATION_JSON)
-    public Result listJobs(@PathParam("jobTypeId") UUID jobTypeId) {
+    public Result listJobs(@PathParam("jobTypeId") UUID jobTypeId)
+            throws ReadFailedException {
         return Result.ok(getApi().listOpenJobs(jobTypeId));
     }
 
@@ -70,7 +71,7 @@ public class JobTypes extends OsgiRestResource {
     public Result listJobs(@PathParam("jobTypeId") UUID jobTypeId,
             @PathParam("latitude") BigDecimal latitude,
             @PathParam("longitude") BigDecimal longitude,
-            @PathParam("range") BigDecimal range) {
+            @PathParam("range") BigDecimal range) throws ReadFailedException {
         BigDecimal kmLong = KM_LONG.multiply(longFactor(latitude),
                 MathContext.DECIMAL64);
         BigDecimal kmLat = KM_LAT;

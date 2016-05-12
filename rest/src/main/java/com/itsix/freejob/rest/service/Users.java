@@ -32,9 +32,17 @@ public class Users extends OsgiRestResource {
         return Result.ok(userId);
     }
 
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result saveUser(User user) throws FreeJobException {
+        UUID userId = getApi().saveUser(user);
+        return Result.ok(userId);
+    }
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Result listUsers() {
+    public Result listUsers() throws ReadFailedException {
         return Result.ok(getApi().listUsers());
     }
 

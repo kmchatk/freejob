@@ -6,7 +6,7 @@ public class WriteFailedException extends FreeJobException {
 
     private static final long serialVersionUID = 0L;
 
-    public WriteFailedException(String message, SQLException cause) {
-        super(message, cause);
+    public WriteFailedException(SQLException cause) {
+        super("Write failed", cause);
     }
 }

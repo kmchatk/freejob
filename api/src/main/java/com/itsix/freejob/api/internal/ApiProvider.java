@@ -21,6 +21,7 @@ import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.Login;
 import com.itsix.freejob.core.Role;
 import com.itsix.freejob.core.Session;
+import com.itsix.freejob.core.Subscription;
 import com.itsix.freejob.core.User;
 import com.itsix.freejob.core.exceptions.LoginFailedException;
 import com.itsix.freejob.core.exceptions.NotFoundException;
@@ -41,12 +42,17 @@ public class ApiProvider implements Api {
     private static final Logger logger = Logger.getLogger(ApiProvider.class);
 
     @Override
-    public UUID register(Login user) throws WriteFailedException {
-        return ds.createUser(user);
+    public UUID register(User user) throws WriteFailedException {
+        return ds.saveUser(user);
     }
 
     @Override
-    public Collection<User> listUsers() {
+    public UUID saveUser(User user) throws WriteFailedException {
+        return ds.saveUser(user);
+    }
+
+    @Override
+    public Collection<User> listUsers() throws ReadFailedException {
         return ds.listUsers();
     }
 
@@ -57,11 +63,17 @@ public class ApiProvider implements Api {
 
     @Override
     public UUID register(Freelancer freelancer) throws WriteFailedException {
-        return ds.createFreelancer(freelancer);
+        return ds.saveFreelancer(freelancer);
     }
 
     @Override
-    public Collection<Freelancer> listFreelancers() {
+    public UUID saveFreelancer(Freelancer freelancer)
+            throws WriteFailedException {
+        return ds.saveFreelancer(freelancer);
+    }
+
+    @Override
+    public Collection<Freelancer> listFreelancers() throws ReadFailedException {
         return ds.listFreelancers();
     }
 
@@ -86,12 +98,12 @@ public class ApiProvider implements Api {
     }
 
     @Override
-    public UUID createJobType(JobType jobType) throws WriteFailedException {
-        return ds.createJobType(jobType);
+    public UUID saveJobType(JobType jobType) throws WriteFailedException {
+        return ds.saveJobType(jobType);
     }
 
     @Override
-    public Collection<JobType> listJobTypes() {
+    public Collection<JobType> listJobTypes() throws ReadFailedException {
         return ds.listJobTypes();
     }
 
@@ -101,13 +113,14 @@ public class ApiProvider implements Api {
     }
 
     @Override
-    public UUID createLocation(UUID userId, Location location)
+    public UUID saveLocation(UUID userId, Location location)
             throws WriteFailedException {
-        return ds.createLocation(userId, location);
+        return ds.saveLocation(userId, location);
     }
 
     @Override
-    public Collection<Location> listLocations(UUID userId) {
+    public Collection<Location> listLocations(UUID userId)
+            throws ReadFailedException {
         return ds.listLocations(userId);
     }
 
@@ -117,29 +130,32 @@ public class ApiProvider implements Api {
     }
 
     @Override
-    public UUID createJob(UUID userId, Job job) throws WriteFailedException {
-        return ds.createJob(userId, job);
+    public UUID saveJob(UUID userId, Job job) throws WriteFailedException {
+        return ds.saveJob(userId, job);
     }
 
     @Override
-    public Collection<Job> listOpenJobs(UUID jobTypeId) {
+    public Collection<Job> listOpenJobs(UUID jobTypeId)
+            throws ReadFailedException {
         return ds.listJobsByType(jobTypeId, Status.OPEN);
     }
 
     @Override
     public Collection<Job> listOpenJobs(UUID jobTypeId, BigDecimal minLat,
-            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong) {
+            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong)
+                    throws ReadFailedException {
         return ds.listJobsByType(jobTypeId, minLat, maxLat, minLong, maxLong);
     }
 
     @Override
-    public Collection<Job> listUserJobs(UUID userId, Status status) {
+    public Collection<Job> listUserJobs(UUID userId, Status status)
+            throws ReadFailedException {
         return ds.listUserJobs(userId, status);
     }
 
     @Override
-    public Collection<Job> listFreelancerJobs(UUID freelancerId,
-            Status status) {
+    public Collection<Job> listFreelancerJobs(UUID freelancerId, Status status)
+            throws ReadFailedException {
         return ds.listFreelancerJobs(freelancerId, status);
     }
 
@@ -171,6 +187,35 @@ public class ApiProvider implements Api {
     public User editUser(UUID userId)
             throws NotFoundException, ReadFailedException {
         return ds.editUser(userId);
+    }
+
+    @Override
+    public void saveSubscription(UUID freelancerId, UUID jobId, String message)
+            throws WriteFailedException {
+        ds.saveSubscription(freelancerId, jobId, message);
+    }
+
+    @Override
+    public Collection<Subscription> listFreelancerSubscriptions(
+            UUID freelancerId) throws ReadFailedException {
+        return ds.listFreelancerSubscriptions(freelancerId);
+    }
+
+    @Override
+    public Collection<Subscription> listJobSubscriptions(UUID jobId)
+            throws ReadFailedException {
+        return ds.listJobSubscriptions(jobId);
+    }
+
+    @Override
+    public void deleteJob(UUID jobId) throws WriteFailedException {
+        ds.deleteJob(jobId);
+    }
+
+    @Override
+    public void deleteSubscription(UUID freelancerId, UUID jobId)
+            throws WriteFailedException {
+        ds.deleteSubscription(freelancerId, jobId);
     }
 
 }
