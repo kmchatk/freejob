@@ -1042,6 +1042,35 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
+    public Subscription editSubscription(UUID freelancerId, UUID jobId)
+            throws ReadFailedException, NotFoundException {
+        Subscription subscription = null;
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            String sql = "SELECT jobid, freelancerid, message from subscription WHERE jobid = ? AND freelancerid = ?";
+            PreparedStatement px = cx.prepareStatement(sql);
+            px.setObject(1, jobId);
+            px.setObject(2, freelancerId);
+            ResultSet rs = px.executeQuery();
+            if (rs.next()) {
+                subscription = getSubscription(rs);
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+            logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        if (subscription == null) {
+            throw new NotFoundException();
+        }
+        return subscription;
+    }
+
+    @Override
     public Collection<Subscription> listFreelancerSubscriptions(
             UUID freelancerId) throws ReadFailedException {
         List<Subscription> subscriptions = new LinkedList<>();

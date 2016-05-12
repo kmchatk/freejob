@@ -21,6 +21,7 @@ public class Job {
     private UUID locationId;
     private BigDecimal netAmount;
     private BigDecimal total;
+    private String message;
 
     public UUID getId() {
         return id;
@@ -116,6 +117,14 @@ public class Job {
 
     public void setTotal(BigDecimal total) {
         this.total = total;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 
 }

@@ -93,4 +93,9 @@ public interface Api {
     void deleteSubscription(UUID freelancerId, UUID jobId)
             throws WriteFailedException;
 
+    void acceptSubscription(UUID freelancerId, UUID jobId)
+            throws WriteFailedException, ReadFailedException, NotFoundException;
+
+    void requestPayment(UUID freelancerId, UUID jobId, BigDecimal netAmount) throws WriteFailedException, NotFoundException, ReadFailedException;
+
 }

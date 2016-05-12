@@ -89,4 +89,6 @@ public interface DataStore {
     void deleteSubscription(UUID freelancerId, UUID jobId)
             throws WriteFailedException;
 
+    Subscription editSubscription(UUID freelancerId, UUID jobId) throws ReadFailedException, NotFoundException;
+
 }

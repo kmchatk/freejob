@@ -6,6 +6,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -30,6 +31,17 @@ public class Subscriptions extends OsgiRestResource {
         return Result.ok();
     }
 
+    @POST
+    @Path("{freelancerId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result acceptSubscription(
+            @PathParam("freelancerId") UUID freelancerId,
+            @PathParam("jobId") UUID jobId) throws FreeJobException {
+        getApi().acceptSubscription(freelancerId, jobId);
+        return Result.ok();
+    }
+    
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Result listSubscriptions(

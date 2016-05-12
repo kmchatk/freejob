@@ -1,5 +1,6 @@
 package com.itsix.freejob.rest.service;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import javax.ws.rs.Consumes;
@@ -32,6 +33,18 @@ public class Jobs extends OsgiRestResource {
             throws FreeJobException {
         UUID jobId = getApi().saveJob(userId, job);
         return Result.ok(jobId);
+    }
+
+    @POST
+    @Path("netAmount/{netAmount}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result requestPayment(@PathParam("freelancerId") UUID freelancerId,
+            @PathParam("jobId") UUID jobId,
+            @PathParam("netAmount") BigDecimal netAmount)
+                    throws FreeJobException {
+        getApi().requestPayment(freelancerId, jobId, netAmount);
+        return Result.ok();
     }
 
     @GET

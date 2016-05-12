@@ -1,6 +1,7 @@
 package com.itsix.freejob.api.internal;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -216,6 +217,38 @@ public class ApiProvider implements Api {
     public void deleteSubscription(UUID freelancerId, UUID jobId)
             throws WriteFailedException {
         ds.deleteSubscription(freelancerId, jobId);
+    }
+
+    @Override
+    public void acceptSubscription(UUID freelancerId, UUID jobId)
+            throws WriteFailedException, ReadFailedException,
+            NotFoundException {
+        Job job = ds.editJob(jobId);
+        Subscription subscription = ds.editSubscription(freelancerId, jobId);
+        job.setFreelancerId(subscription.getFreelancerId());
+        job.setMessage(subscription.getMessage());
+        job.setStatus(Status.ACCEPTED);
+        ds.saveJob(job.getUserId(), job);
+    }
+
+    @Override
+    public void requestPayment(UUID freelancerId, UUID jobId,
+            BigDecimal netAmount) throws WriteFailedException,
+                    NotFoundException, ReadFailedException {
+        Job job = ds.editJob(jobId);
+        if (!job.getFreelancerId().equals(freelancerId)) {
+            throw new NotFoundException();
+        }
+        JobType jobType = ds.editJobType(job.getJobTypeId());
+        BigDecimal commission = jobType.getCommission();
+        BigDecimal total = netAmount.multiply(commission)
+                .divide(new BigDecimal(100.0), RoundingMode.HALF_UP)
+                .add(netAmount);
+        job.setNetAmount(netAmount);
+        job.setTotal(total);
+        job.setStatus(Status.PAYMENT_REQUESTED);
+        ds.saveJob(job.getUserId(), job);
+
     }
 
 }
