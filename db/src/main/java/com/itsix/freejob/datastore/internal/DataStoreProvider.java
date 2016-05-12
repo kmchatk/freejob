@@ -87,7 +87,7 @@ public class DataStoreProvider implements DataStore {
 
     private void runSqlJob(Statement statement) {
         runSQL(statement,
-                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, status VARCHAR(20), created BIGINT, rating INT, title varchar(120), description VARCHAR(4096), jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID, netamount DECIMAL(10,2), total DECIMAL(10,2)");
+                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, status VARCHAR(20), created BIGINT, rating INT, title varchar(120), description VARCHAR(4096), jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID, netamount DECIMAL(10,2), total DECIMAL(10,2))");
         runSQL(statement,
                 "ALTER TABLE job ALTER COLUMN jobtypeid SET NOT NULL");
         runSQL(statement,
