@@ -111,7 +111,7 @@ public class DataStoreProvider implements DataStore {
 
     private void runSqlJob(Statement statement) {
         runSQL(statement,
-                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, status VARCHAR(20), created BIGINT, rating INT, title varchar(120), description VARCHAR(4096), jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID, netamount DECIMAL(10,2), total DECIMAL(10,2))");
+                "CREATE TABLE IF NOT EXISTS job (id UUID PRIMARY KEY, status VARCHAR(20), created BIGINT, rating INT, title varchar(120), description VARCHAR(4096), jobtypeid UUID, freelancerid UUID, locationid UUID, userid UUID, netamount DECIMAL(10,2), total DECIMAL(10,2), message VARCHAR(4096))");
         runSQL(statement,
                 "ALTER TABLE job ALTER COLUMN jobtypeid SET NOT NULL");
         runSQL(statement,
@@ -144,6 +144,8 @@ public class DataStoreProvider implements DataStore {
                 "ALTER TABLE job ADD COLUMN IF NOT EXISTS netamount DECIMAL(10,2)");
         runSQL(statement,
                 "ALTER TABLE job ADD COLUMN IF NOT EXISTS total DECIMAL(10,2)");
+        runSQL(statement,
+                "ALTER TABLE job ADD COLUMN IF NOT EXISTS message VARCHAR(4096)");
     }
 
     private void runSqlUser(Statement statement) {
@@ -632,6 +634,36 @@ public class DataStoreProvider implements DataStore {
         return freelancers;
     }
 
+    @Override
+    public Collection<Freelancer> listFreelancers(UUID jobTypeId,
+            BigDecimal minLat, BigDecimal maxLat, BigDecimal minLong,
+            BigDecimal maxLong) throws ReadFailedException {
+        List<Freelancer> jobs = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            String sql = "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number, created FROM freelancer WHERE jobtypeid = ? AND (geo_lat BETWEEN ? AND ?) AND (geo_long BETWEEN ? AND ?)";
+            PreparedStatement px = cx.prepareStatement(sql);
+            px.setObject(1, jobTypeId);
+            px.setBigDecimal(2, minLat);
+            px.setBigDecimal(3, maxLat);
+            px.setBigDecimal(4, minLong);
+            px.setBigDecimal(5, maxLong);
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                jobs.add(getFreelancer(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+            logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return jobs;
+    }
+
     private Freelancer getFreelancer(ResultSet rs) throws SQLException {
         Freelancer freelancer = new Freelancer();
         freelancer.setId((UUID) rs.getObject("id"));
@@ -888,8 +920,8 @@ public class DataStoreProvider implements DataStore {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "MERGE INTO job(id, title, description, status, rating, jobtypeid, freelancerid, locationid, userid, netamount, total) "
-                            + values(11));
+                    "MERGE INTO job(id, title, description, status, rating, jobtypeid, freelancerid, locationid, userid, netamount, total, message) "
+                            + values(12));
             UUID jobId = job.getId();
             if (jobId == null) {
                 jobId = UUID.randomUUID();
@@ -905,6 +937,7 @@ public class DataStoreProvider implements DataStore {
             px.setObject(9, userId);
             px.setBigDecimal(10, job.getNetAmount());
             px.setBigDecimal(11, job.getTotal());
+            px.setString(12, job.getMessage());
 
             px.execute();
             px.close();
@@ -940,7 +973,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.id = ?");
+                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, j.message, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.id = ?");
             px.setObject(1, jobId);
             ResultSet rs = px.executeQuery();
             if (rs.next()) {
@@ -968,7 +1001,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.jobtypeid = ? and j.status = ?");
+                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, j.message, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.jobtypeid = ? and j.status = ?");
             px.setObject(1, jobTypeId);
             px.setString(2, status.name());
             ResultSet rs = px.executeQuery();
@@ -995,7 +1028,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.jobtypeid = ? AND (l.geo_lat BETWEEN ? AND ?) AND (l.geo_long BETWEEN ? AND ?)");
+                    "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, j.message, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.jobtypeid = ? AND (l.geo_lat BETWEEN ? AND ?) AND (l.geo_long BETWEEN ? AND ?)");
             px.setObject(1, jobTypeId);
             px.setBigDecimal(2, minLat);
             px.setBigDecimal(3, maxLat);
@@ -1023,7 +1056,7 @@ public class DataStoreProvider implements DataStore {
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.userid = ? ";
+            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, j.message, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.userid = ? ";
             if (status != null) {
                 sql += "and status = ?";
             }
@@ -1054,7 +1087,7 @@ public class DataStoreProvider implements DataStore {
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id ";
+            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, j.message, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id ";
             if (status != null) {
                 sql += " WHERE status = ?";
             }
@@ -1084,7 +1117,7 @@ public class DataStoreProvider implements DataStore {
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long, u.firstname, u.lastname FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id LEFT JOIN user AS u ON j.userid = u.id WHERE j.freelancerid = ? ";
+            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, j.message, l.geo_lat, l.geo_long, u.firstname, u.lastname FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id LEFT JOIN user AS u ON j.userid = u.id WHERE j.freelancerid = ? ";
             if (status != null) {
                 sql += "and status = ?";
             }
@@ -1122,6 +1155,7 @@ public class DataStoreProvider implements DataStore {
         job.setUserId((UUID) rs.getObject("userid"));
         job.setNetAmount(rs.getBigDecimal("netamount"));
         job.setTotal(rs.getBigDecimal("total"));
+        job.setMessage(rs.getString("message"));
         try {
             job.setLatitude(rs.getBigDecimal("geo_lat"));
             job.setLongitude(rs.getBigDecimal("geo_long"));
@@ -1249,7 +1283,7 @@ public class DataStoreProvider implements DataStore {
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM subscription AS s LEFT JOIN job AS j on s.jobid = j.id LEFT JOIN location l on j.locationid = l.id WHERE s.freelancerid = ? AND j.status = ?";
+            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, s.message, l.geo_lat, l.geo_long FROM subscription AS s LEFT JOIN job AS j on s.jobid = j.id LEFT JOIN location l on j.locationid = l.id WHERE s.freelancerid = ? AND j.status = ?";
             PreparedStatement px = cx.prepareStatement(sql);
             px.setObject(1, freelancerId);
             px.setString(2, Status.OPEN.name());

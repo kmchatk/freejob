@@ -310,4 +310,11 @@ public class ApiProvider implements Api {
 
     }
 
+    @Override
+    public Collection<Freelancer> listFreelancers(UUID jobTypeId,
+            BigDecimal minLat, BigDecimal maxLat, BigDecimal minLong,
+            BigDecimal maxLong) throws ReadFailedException {
+        return ds.listFreelancers(jobTypeId, minLat, maxLat, minLong, maxLong);
+    }
+
 }

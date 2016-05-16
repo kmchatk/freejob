@@ -100,10 +100,14 @@ public interface Api {
 
     void requestPayment(UUID freelancerId, UUID jobId, BigDecimal netAmount)
             throws WriteFailedException, NotFoundException, ReadFailedException;
-    
+
     void rateJob(UUID userId, UUID jobId, int rating)
             throws WriteFailedException, NotFoundException, ReadFailedException;
 
     Collection<Job> listJobs(Status status) throws ReadFailedException;
+
+    Collection<Freelancer> listFreelancers(UUID jobTypeId, BigDecimal minLat,
+            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong)
+                    throws ReadFailedException;
 
 }

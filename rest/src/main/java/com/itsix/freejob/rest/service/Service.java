@@ -1,6 +1,7 @@
 package com.itsix.freejob.rest.service;
 
 import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -30,7 +31,8 @@ public class Service {
     }
 
     @Path("freelancers")
-    public Freelancers getFreelancers(@Context ResourceContext rc) {
+    public Freelancers getFreelancers(@Context ResourceContext rc,
+            @Context HttpServletRequest request) {
         return rc.getResource(Freelancers.class);
     }
 

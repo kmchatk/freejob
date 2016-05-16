@@ -1,6 +1,7 @@
 package com.itsix.freejob.rest.service;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.UUID;
 
 import javax.ws.rs.Consumes;
@@ -26,6 +27,7 @@ import com.sun.jersey.api.core.ResourceContext;
 
 public class Jobs extends OsgiRestResource {
 
+  
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -60,10 +62,13 @@ public class Jobs extends OsgiRestResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Result listJobs(@PathParam("userId") UUID userId,
+    public Result listJobs(@PathParam("jobTypeId") UUID jobTypeId,
+            @PathParam("userId") UUID userId,
             @PathParam("freelancerId") UUID freelancerId,
             @QueryParam("status") Status status) throws ReadFailedException {
-        if (userId != null) {
+        if (jobTypeId != null) {
+            return Result.ok(getApi().listOpenJobs(jobTypeId));
+        } else if (userId != null) {
             return Result.ok(getApi().listUserJobs(userId, status));
         } else if (freelancerId != null) {
             return Result.ok(getApi().listFreelancerJobs(freelancerId, status));
@@ -71,6 +76,26 @@ public class Jobs extends OsgiRestResource {
             return Result.ok(getApi().listJobs(status));
         }
 
+    }
+
+    @GET
+    @Path("latitude/{latitude}/longitude/{longitude}/range/{range}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result listJobs(@PathParam("jobTypeId") UUID jobTypeId,
+            @PathParam("latitude") BigDecimal latitude,
+            @PathParam("longitude") BigDecimal longitude,
+            @PathParam("range") BigDecimal range) throws ReadFailedException {
+        BigDecimal kmLong = KM_LONG.multiply(longFactor(latitude),
+                MathContext.DECIMAL64);
+        BigDecimal kmLat = KM_LAT;
+        BigDecimal dlong = range.divide(kmLong, MathContext.DECIMAL64);
+        BigDecimal dlat = range.divide(kmLat, MathContext.DECIMAL64);
+        BigDecimal maxLat = latitude.add(dlat);
+        BigDecimal minLat = latitude.subtract(dlat);
+        BigDecimal maxLong = longitude.add(dlong);
+        BigDecimal minLong = longitude.subtract(dlong);
+        return Result.ok(getApi().listOpenJobs(jobTypeId, minLat, maxLat,
+                minLong, maxLong));
     }
 
     @GET

@@ -96,4 +96,8 @@ public interface DataStore {
 
     Collection<Job> listJobsByStatus(Status status) throws ReadFailedException;
 
+    Collection<Freelancer> listFreelancers(UUID jobTypeId, BigDecimal minLat,
+            BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong)
+                    throws ReadFailedException;
+
 }
