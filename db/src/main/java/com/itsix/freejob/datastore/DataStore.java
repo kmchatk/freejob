@@ -40,6 +40,8 @@ public interface DataStore {
     Login login(String email, String password, Role role)
             throws ReadFailedException;
 
+    Login login(String email, Role role) throws ReadFailedException;
+
     UUID saveLocation(UUID userId, Location location)
             throws WriteFailedException;
 
@@ -78,10 +80,10 @@ public interface DataStore {
     void saveSubscription(UUID freelancerId, UUID jobId, String message)
             throws WriteFailedException;
 
-    Collection<Subscription> listJobSubscriptions(UUID jobId)
+    Collection<Freelancer> listSubscribers(UUID jobId)
             throws ReadFailedException;
 
-    Collection<Subscription> listFreelancerSubscriptions(UUID freelancerId)
+    Collection<Job> listSubscriptions(UUID freelancerId)
             throws ReadFailedException;
 
     void deleteJob(UUID jobId) throws WriteFailedException;
@@ -89,6 +91,9 @@ public interface DataStore {
     void deleteSubscription(UUID freelancerId, UUID jobId)
             throws WriteFailedException;
 
-    Subscription editSubscription(UUID freelancerId, UUID jobId) throws ReadFailedException, NotFoundException;
+    Subscription editSubscription(UUID freelancerId, UUID jobId)
+            throws ReadFailedException, NotFoundException;
+
+    Collection<Job> listJobsByStatus(Status status) throws ReadFailedException;
 
 }

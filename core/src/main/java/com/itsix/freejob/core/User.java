@@ -10,6 +10,7 @@ public class User implements Login {
     private String email;
     private Role role;
     private String password;
+    private long created = System.currentTimeMillis();
 
     @Override
     public UUID getId() {
@@ -19,6 +20,14 @@ public class User implements Login {
     @Override
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public long getCreated() {
+        return created;
+    }
+
+    public void setCreated(long created) {
+        this.created = created;
     }
 
     @Override

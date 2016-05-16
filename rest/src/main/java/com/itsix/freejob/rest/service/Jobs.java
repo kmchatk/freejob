@@ -47,6 +47,17 @@ public class Jobs extends OsgiRestResource {
         return Result.ok();
     }
 
+    @POST
+    @Path("rating/{rating}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result rateJob(@PathParam("freelancerId") UUID userId,
+            @PathParam("jobId") UUID jobId, @PathParam("rating") int rating)
+                    throws FreeJobException {
+        getApi().rateJob(userId, jobId, rating);
+        return Result.ok();
+    }
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Result listJobs(@PathParam("userId") UUID userId,
@@ -54,8 +65,11 @@ public class Jobs extends OsgiRestResource {
             @QueryParam("status") Status status) throws ReadFailedException {
         if (userId != null) {
             return Result.ok(getApi().listUserJobs(userId, status));
+        } else if (freelancerId != null) {
+            return Result.ok(getApi().listFreelancerJobs(freelancerId, status));
+        } else {
+            return Result.ok(getApi().listJobs(status));
         }
-        return Result.ok(getApi().listFreelancerJobs(freelancerId, status));
 
     }
 

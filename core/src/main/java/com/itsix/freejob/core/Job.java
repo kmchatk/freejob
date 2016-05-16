@@ -24,6 +24,8 @@ public class Job {
     private String message;
     private BigDecimal latitude;
     private BigDecimal longitude;
+    private String lastName;
+    private String firstName;
 
     public UUID getId() {
         return id;
@@ -143,6 +145,22 @@ public class Job {
 
     public void setLongitude(BigDecimal longitude) {
         this.longitude = longitude;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
     }
 
 }

@@ -1,5 +1,7 @@
 package com.itsix.freejob.rest.service;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.util.UUID;
 
 import javax.ws.rs.Consumes;
@@ -27,6 +29,17 @@ public class Freelancers extends OsgiRestResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Result register(Freelancer freelancer) throws WriteFailedException {
+        UUID freelancerId = getApi().register(freelancer);
+        return Result.ok(freelancerId);
+    }
+
+    @POST
+    @Path("register/social")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result registerSocial(Freelancer freelancer)
+            throws WriteFailedException {
+        freelancer.setPassword(null);
         UUID freelancerId = getApi().register(freelancer);
         return Result.ok(freelancerId);
     }

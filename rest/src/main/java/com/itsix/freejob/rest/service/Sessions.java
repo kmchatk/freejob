@@ -26,4 +26,15 @@ public class Sessions extends OsgiRestResource {
         return Result.ok(session);
     }
 
+    @POST
+    @Path("login/social")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result loginSocial(LoginDTO loginDTO)
+            throws LoginFailedException, ReadFailedException {
+        Session session = getApi().login(loginDTO.getEmail(),
+                loginDTO.getRole());
+        return Result.ok(session);
+    }
+
 }

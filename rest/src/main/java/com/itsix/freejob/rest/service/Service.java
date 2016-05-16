@@ -39,6 +39,11 @@ public class Service {
         return rc.getResource(JobTypes.class);
     }
 
+    @Path("jobs")
+    public Jobs getJobs(@Context ResourceContext rc) {
+        return rc.getResource(Jobs.class);
+    }
+
     @Path("sessions")
     public Sessions getSessions(@Context ResourceContext rc) {
         return rc.getResource(Sessions.class);

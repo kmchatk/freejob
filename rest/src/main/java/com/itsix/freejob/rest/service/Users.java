@@ -33,6 +33,16 @@ public class Users extends OsgiRestResource {
     }
 
     @POST
+    @Path("register/social")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Result registerSocial(User user) throws FreeJobException {
+        user.setPassword(null);
+        UUID userId = getApi().register(user);
+        return Result.ok(userId);
+    }
+
+    @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Result saveUser(User user) throws FreeJobException {

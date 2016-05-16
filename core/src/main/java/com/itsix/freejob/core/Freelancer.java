@@ -19,6 +19,9 @@ public class Freelancer implements Login {
     private int avgRating;
     private String bankName;
     private String accountNumber;
+    private String message;
+    private long created;
+    private String jobTypeName;
 
     public UUID getId() {
         return id;
@@ -26,6 +29,14 @@ public class Freelancer implements Login {
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public long getCreated() {
+        return created;
+    }
+
+    public void setCreated(long created) {
+        this.created = created;
     }
 
     public UUID getJobTypeId() {
@@ -134,6 +145,22 @@ public class Freelancer implements Login {
 
     public void setRole(Role role) {
         //Does nothing.
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public String getJobTypeName() {
+        return jobTypeName;
+    }
+
+    public void setJobTypeName(String jobTypeName) {
+        this.jobTypeName = jobTypeName;
     }
 
     public Role getRole() {

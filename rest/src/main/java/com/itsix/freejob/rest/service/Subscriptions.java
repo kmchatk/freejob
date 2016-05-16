@@ -41,17 +41,16 @@ public class Subscriptions extends OsgiRestResource {
         getApi().acceptSubscription(freelancerId, jobId);
         return Result.ok();
     }
-    
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Result listSubscriptions(
             @PathParam("freelancerId") UUID freelancerId,
             @PathParam("jobId") UUID jobId) throws ReadFailedException {
         if (freelancerId != null) {
-            return Result
-                    .ok(getApi().listFreelancerSubscriptions(freelancerId));
+            return Result.ok(getApi().listSubscriptions(freelancerId));
         }
-        return Result.ok(getApi().listJobSubscriptions(jobId));
+        return Result.ok(getApi().listSubscribers(jobId));
     }
 
     @DELETE

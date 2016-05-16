@@ -39,6 +39,8 @@ import com.itsix.freejob.datastore.DatabaseManager;
 @Provides
 public class DataStoreProvider implements DataStore {
 
+    private static final UUID ADMIN_ID = new UUID(0, 0);
+
     @Requires
     DatabaseManager dbm;
 
@@ -67,6 +69,24 @@ public class DataStoreProvider implements DataStore {
         } finally {
             dbm.releaseConnection(connection);
         }
+        try {
+            editUser(ADMIN_ID);
+        } catch (NotFoundException e) {
+            User admin = new User();
+            admin.setEmail("admin@change.me");
+            admin.setFirstName("System Admin");
+            admin.setLastName("");
+            admin.setRole(Role.ADMIN);
+            admin.setId(ADMIN_ID);
+            admin.setPassword("change.me");
+            try {
+                saveUser(admin);
+            } catch (WriteFailedException e1) {
+                logger.error("Could not save admin user", e1);
+            }
+        } catch (ReadFailedException e) {
+            logger.error("Could not read admin user", e);
+        }
     }
 
     private void runSqlTest(Statement statement) {
@@ -83,6 +103,10 @@ public class DataStoreProvider implements DataStore {
                 "ALTER TABLE freelancer ADD CONSTRAINT IF NOT EXISTS freelancer_email_unique UNIQUE(email)");
         runSQL(statement,
                 "ALTER TABLE freelancer ADD CONSTRAINT IF NOT EXISTS freelancer_jobtypeid_fk FOREIGN KEY(jobtypeid) REFERENCES jobtype(id)");
+        runSQL(statement,
+                "ALTER TABLE freelancer ADD COLUMN IF NOT EXISTS created BIGINT");
+        runSQL(statement, "UPDATE freelancer SET created = "
+                + System.currentTimeMillis() + " WHERE created IS NULL");
     }
 
     private void runSqlJob(Statement statement) {
@@ -124,9 +148,14 @@ public class DataStoreProvider implements DataStore {
 
     private void runSqlUser(Statement statement) {
         runSQL(statement,
-                "CREATE TABLE IF NOT EXISTS user (id UUID PRIMARY KEY, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), password VARCHAR(32), role VARCHAR(32))");
+                "CREATE TABLE IF NOT EXISTS user (id UUID PRIMARY KEY, firstname VARCHAR(50), lastname VARCHAR(50), email VARCHAR(255), password VARCHAR(32), role VARCHAR(32), created BIGINT)");
         runSQL(statement,
                 "ALTER TABLE user ADD CONSTRAINT IF NOT EXISTS user_email_unique UNIQUE(email)");
+        runSQL(statement,
+                "ALTER TABLE user ADD COLUMN IF NOT EXISTS created BIGINT");
+        runSQL(statement, "UPDATE user SET created = "
+                + System.currentTimeMillis() + " WHERE created IS NULL");
+
     }
 
     private void runSqlJobType(Statement statement) {
@@ -179,6 +208,10 @@ public class DataStoreProvider implements DataStore {
                     "MERGE INTO user(id, firstname, lastname, email, role) "
                             + values(5));
             UUID userId = user.getId();
+            Role role = user.getRole();
+            if (role == null) {
+                role = Role.CUSTOMER;
+            }
             if (userId == null) {
                 userId = UUID.randomUUID();
             }
@@ -186,9 +219,17 @@ public class DataStoreProvider implements DataStore {
             px.setString(2, user.getFirstName());
             px.setString(3, user.getLastName());
             px.setString(4, user.getEmail());
-            px.setString(5, Role.CUSTOMER.name());
+            px.setString(5, role.name());
             px.execute();
             px.close();
+            if (user.getId() == null) {
+                px = cx.prepareStatement(
+                        "UPDATE user set created = ? WHERE id = ?");
+                px.setLong(1, System.currentTimeMillis());
+                px.setObject(2, userId);
+                px.execute();
+                px.close();
+            }
             if (user.getPassword() != null) {
                 px = cx.prepareStatement(
                         "UPDATE user SET password = ? where id = ?");
@@ -245,7 +286,8 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, firstname, lastname, email, role FROM user");
+                    "SELECT id, firstname, lastname, email, role, created FROM user where role = ?");
+            px.setString(1, Role.CUSTOMER.name());
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
                 users.add(getUser(rs));
@@ -268,6 +310,7 @@ public class DataStoreProvider implements DataStore {
         user.setLastName(rs.getString("lastname"));
         user.setEmail(rs.getString("email"));
         user.setRole(Role.valueOf(rs.getString("role")));
+        user.setCreated(rs.getLong("created"));
         return user;
     }
 
@@ -295,21 +338,58 @@ public class DataStoreProvider implements DataStore {
         switch (role) {
         case FREELANCER:
             return findFreelancer(email, password);
+        case CUSTOMER:
+        case ADMIN:
+            return findUser(email, password, role);
         default:
-            return findUser(email, password);
+            return findUser(email, password, role);
         }
     }
 
-    public User findUser(String email, String password)
+    @Override
+    public Login login(String email, Role role) throws ReadFailedException {
+        switch (role) {
+        case FREELANCER:
+            return findFreelancer(email);
+        default:
+            return findUser(email);
+        }
+    }
+
+    public User findUser(String email, String password, Role role)
             throws ReadFailedException {
         User user = null;
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, firstname, lastname, email, role FROM user WHERE email = ? AND password = ?");
+                    "SELECT id, firstname, lastname, email, role, created FROM user WHERE email = ? AND password = ? AND role = ?");
             px.setString(1, email);
             px.setString(2, md5(password));
+            px.setString(3, role.name());
+            ResultSet rs = px.executeQuery();
+            if (rs.next()) {
+                user = getUser(rs);
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+            logger.warn("Failed to find user", e);
+            throw new ReadFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return user;
+    }
+
+    public User findUser(String email) throws ReadFailedException {
+        User user = null;
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, firstname, lastname, email, role, created FROM user WHERE email = ? AND password IS NULL");
+            px.setString(1, email);
             ResultSet rs = px.executeQuery();
             if (rs.next()) {
                 user = getUser(rs);
@@ -332,7 +412,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, firstname, lastname, email, role FROM user WHERE id = ?");
+                    "SELECT id, firstname, lastname, email, role, created FROM user WHERE id = ?");
             px.setObject(1, userId);
             ResultSet rs = px.executeQuery();
             if (rs.next()) {
@@ -419,8 +499,8 @@ public class DataStoreProvider implements DataStore {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
                     "SELECT id, name, description, commission FROM jobtype where id = ?");
-            ResultSet rs = px.executeQuery();
             px.setObject(1, jobTypeId);
+            ResultSet rs = px.executeQuery();
             if (rs.next()) {
                 jobType = getJobType(rs);
             }
@@ -497,6 +577,15 @@ public class DataStoreProvider implements DataStore {
             px.execute();
             px.close();
 
+            if (freelancer.getId() == null) {
+                px = cx.prepareStatement(
+                        "UPDATE freelancer set created = ? WHERE id = ?");
+                px.setLong(1, System.currentTimeMillis());
+                px.setObject(2, freelancerId);
+                px.execute();
+                px.close();
+            }
+
             if (freelancer.getPassword() != null) {
                 px = cx.prepareStatement(
                         "UPDATE freelancer SET password = ? where id = ?");
@@ -527,7 +616,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number FROM freelancer");
+                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number, created FROM freelancer");
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
                 freelancers.add(getFreelancer(rs));
@@ -558,6 +647,16 @@ public class DataStoreProvider implements DataStore {
         freelancer.setAvgRating(rs.getInt("avg_rating"));
         freelancer.setBankName(rs.getString("bank_name"));
         freelancer.setAccountNumber(rs.getString("account_number"));
+        freelancer.setCreated(rs.getLong("created"));
+        try {
+            freelancer.setMessage(rs.getString("message"));
+        } catch (SQLException e) {
+        }
+        try {
+            freelancer.setJobTypeName(rs.getString("jobtypename"));
+        } catch (SQLException e) {
+
+        }
         return freelancer;
     }
 
@@ -568,9 +667,32 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number FROM freelancer WHERE email = ? and password = ?");
+                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number, created FROM freelancer WHERE email = ? and password = ?");
             px.setString(1, email);
             px.setString(2, md5(password));
+            ResultSet rs = px.executeQuery();
+            if (rs.next()) {
+                freelancer = getFreelancer(rs);
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+            logger.warn("Failed to find freelancer", e);
+            throw new ReadFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return freelancer;
+    }
+
+    public Freelancer findFreelancer(String email) throws ReadFailedException {
+        Freelancer freelancer = null;
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            PreparedStatement px = cx.prepareStatement(
+                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number, created FROM freelancer WHERE email = ? and password IS NULL");
+            px.setString(1, email);
             ResultSet rs = px.executeQuery();
             if (rs.next()) {
                 freelancer = getFreelancer(rs);
@@ -593,7 +715,7 @@ public class DataStoreProvider implements DataStore {
         try {
             cx = dbm.getConnection("freejob");
             PreparedStatement px = cx.prepareStatement(
-                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number FROM freelancer WHERE id = ?");
+                    "SELECT id, jobtypeid, firstname, lastname, email, password, address, geo_lat, geo_long, city, county, avg_rating, bank_name, account_number, created FROM freelancer WHERE id = ?");
             px.setObject(1, freelancerId);
             ResultSet rs = px.executeQuery();
             if (rs.next()) {
@@ -766,28 +888,35 @@ public class DataStoreProvider implements DataStore {
             cx = dbm.getConnection("freejob");
             cx.setAutoCommit(false);
             PreparedStatement px = cx.prepareStatement(
-                    "MERGE INTO job(id, title, description, status, created, rating, jobtypeid, freelancerid, locationid, userid, netamount, total) "
-                            + values(12));
+                    "MERGE INTO job(id, title, description, status, rating, jobtypeid, freelancerid, locationid, userid, netamount, total) "
+                            + values(11));
             UUID jobId = job.getId();
             if (jobId == null) {
                 jobId = UUID.randomUUID();
             }
-            long created = System.currentTimeMillis();
             px.setObject(1, jobId);
             px.setString(2, job.getTitle());
             px.setString(3, job.getDescription());
             px.setString(4, Status.OPEN.name());
-            px.setLong(5, created);
-            px.setInt(6, job.getRating());
-            px.setObject(7, job.getJobTypeId());
-            px.setObject(8, job.getFreelancerId());
-            px.setObject(9, job.getLocationId());
-            px.setObject(10, userId);
-            px.setBigDecimal(11, job.getNetAmount());
-            px.setBigDecimal(12, job.getTotal());
+            px.setInt(5, job.getRating());
+            px.setObject(6, job.getJobTypeId());
+            px.setObject(7, job.getFreelancerId());
+            px.setObject(8, job.getLocationId());
+            px.setObject(9, userId);
+            px.setBigDecimal(10, job.getNetAmount());
+            px.setBigDecimal(11, job.getTotal());
 
             px.execute();
             px.close();
+
+            if (job.getId() == null) {
+                px = cx.prepareStatement(
+                        "UPDATE job set created = ? WHERE id = ?");
+                px.setLong(1, System.currentTimeMillis());
+                px.setObject(2, jobId);
+                px.execute();
+                px.close();
+            }
             cx.commit();
             return jobId;
         } catch (SQLException e) {
@@ -901,7 +1030,37 @@ public class DataStoreProvider implements DataStore {
             PreparedStatement px = cx.prepareStatement(sql);
             px.setObject(1, userId);
             if (status != null) {
-                px.setObject(2, status);
+                px.setString(2, status.name());
+            }
+            ResultSet rs = px.executeQuery();
+            while (rs.next()) {
+                jobs.add(getJob(rs));
+            }
+            rs.close();
+            px.close();
+        } catch (SQLException e) {
+            logger.warn("Failed to list jobs", e);
+            throw new ReadFailedException(e);
+        } finally {
+            dbm.releaseConnection(cx);
+        }
+        return jobs;
+    }
+
+    @Override
+    public Collection<Job> listJobsByStatus(Status status)
+            throws ReadFailedException {
+        List<Job> jobs = new LinkedList<>();
+        Connection cx = null;
+        try {
+            cx = dbm.getConnection("freejob");
+            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id ";
+            if (status != null) {
+                sql += " WHERE status = ?";
+            }
+            PreparedStatement px = cx.prepareStatement(sql);
+            if (status != null) {
+                px.setString(1, status.name());
             }
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
@@ -925,14 +1084,14 @@ public class DataStoreProvider implements DataStore {
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id WHERE j.freelancerid = ? ";
+            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long, u.firstname, u.lastname FROM job AS j LEFT JOIN location AS l ON j.locationid = l.id LEFT JOIN user AS u ON j.userid = u.id WHERE j.freelancerid = ? ";
             if (status != null) {
                 sql += "and status = ?";
             }
             PreparedStatement px = cx.prepareStatement(sql);
             px.setObject(1, freelancerId);
             if (status != null) {
-                px.setObject(2, status);
+                px.setString(2, status.name());
             }
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
@@ -966,6 +1125,13 @@ public class DataStoreProvider implements DataStore {
         try {
             job.setLatitude(rs.getBigDecimal("geo_lat"));
             job.setLongitude(rs.getBigDecimal("geo_long"));
+        } catch (SQLException e) {
+
+        }
+
+        try {
+            job.setFirstName(rs.getString("firstname"));
+            job.setLastName(rs.getString("lastname"));
         } catch (SQLException e) {
 
         }
@@ -1023,23 +1189,23 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public Collection<Subscription> listJobSubscriptions(UUID jobId)
+    public Collection<Freelancer> listSubscribers(UUID jobId)
             throws ReadFailedException {
-        List<Subscription> subscriptions = new LinkedList<>();
+        List<Freelancer> subscriptions = new LinkedList<>();
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT jobid, freelancerid, message from subscription WHERE jobid = ? ";
+            String sql = "SELECT f.id, f.jobtypeid, f.firstname, f.lastname, f.email, f.password, f.address, f.geo_lat, f.geo_long, f.city, f.county, f.avg_rating, f.bank_name, f.account_number, f.created, s.message FROM subscription AS s LEFT JOIN freelancer AS f on s.freelancerid = f.id where s.jobid = ?";
             PreparedStatement px = cx.prepareStatement(sql);
             px.setObject(1, jobId);
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
-                subscriptions.add(getSubscription(rs));
+                subscriptions.add(getFreelancer(rs));
             }
             rs.close();
             px.close();
         } catch (SQLException e) {
-            logger.warn("Failed to list jobs", e);
+            logger.warn("Failed to list freelancers", e);
             throw new ReadFailedException(e);
         } finally {
             dbm.releaseConnection(cx);
@@ -1077,18 +1243,19 @@ public class DataStoreProvider implements DataStore {
     }
 
     @Override
-    public Collection<Subscription> listFreelancerSubscriptions(
-            UUID freelancerId) throws ReadFailedException {
-        List<Subscription> subscriptions = new LinkedList<>();
+    public Collection<Job> listSubscriptions(UUID freelancerId)
+            throws ReadFailedException {
+        List<Job> subscriptions = new LinkedList<>();
         Connection cx = null;
         try {
             cx = dbm.getConnection("freejob");
-            String sql = "SELECT jobid, freelancerid, message from subscription WHERE freelancerid = ? ";
+            String sql = "SELECT j.id, j.title, j.description, j.status, j.created, j.rating, j.jobtypeid, j.freelancerid, j.locationid, j.userid, j.netamount, j.total, l.geo_lat, l.geo_long FROM subscription AS s LEFT JOIN job AS j on s.jobid = j.id LEFT JOIN location l on j.locationid = l.id WHERE s.freelancerid = ? AND j.status = ?";
             PreparedStatement px = cx.prepareStatement(sql);
             px.setObject(1, freelancerId);
+            px.setString(2, Status.OPEN.name());
             ResultSet rs = px.executeQuery();
             while (rs.next()) {
-                subscriptions.add(getSubscription(rs));
+                subscriptions.add(getJob(rs));
             }
             rs.close();
             px.close();

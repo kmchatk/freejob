@@ -11,7 +11,6 @@ import com.itsix.freejob.core.JobType;
 import com.itsix.freejob.core.Location;
 import com.itsix.freejob.core.Role;
 import com.itsix.freejob.core.Session;
-import com.itsix.freejob.core.Subscription;
 import com.itsix.freejob.core.User;
 import com.itsix.freejob.core.exceptions.LoginFailedException;
 import com.itsix.freejob.core.exceptions.NotFoundException;
@@ -39,6 +38,9 @@ public interface Api {
     void deleteJobType(UUID jobTypeId) throws WriteFailedException;
 
     Session login(String email, String password, Role role)
+            throws LoginFailedException, ReadFailedException;
+
+    Session login(String email, Role role)
             throws LoginFailedException, ReadFailedException;
 
     UUID saveLocation(UUID userId, Location location)
@@ -78,10 +80,10 @@ public interface Api {
     void saveSubscription(UUID freelancerId, UUID jobId, String message)
             throws WriteFailedException;
 
-    Collection<Subscription> listFreelancerSubscriptions(UUID freelancerId)
+    Collection<Job> listSubscriptions(UUID freelancerId)
             throws ReadFailedException;
 
-    Collection<Subscription> listJobSubscriptions(UUID jobId)
+    Collection<Freelancer> listSubscribers(UUID jobId)
             throws ReadFailedException;
 
     UUID saveFreelancer(Freelancer freelancer) throws WriteFailedException;
@@ -96,6 +98,12 @@ public interface Api {
     void acceptSubscription(UUID freelancerId, UUID jobId)
             throws WriteFailedException, ReadFailedException, NotFoundException;
 
-    void requestPayment(UUID freelancerId, UUID jobId, BigDecimal netAmount) throws WriteFailedException, NotFoundException, ReadFailedException;
+    void requestPayment(UUID freelancerId, UUID jobId, BigDecimal netAmount)
+            throws WriteFailedException, NotFoundException, ReadFailedException;
+    
+    void rateJob(UUID userId, UUID jobId, int rating)
+            throws WriteFailedException, NotFoundException, ReadFailedException;
+
+    Collection<Job> listJobs(Status status) throws ReadFailedException;
 
 }
