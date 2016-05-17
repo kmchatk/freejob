@@ -153,15 +153,35 @@ public class ApiProvider implements Api {
     @Override
     public Collection<Job> listOpenJobs(UUID jobTypeId)
             throws ReadFailedException {
-        return readJobDetails(ds.listJobsByType(jobTypeId, Status.OPEN));
+        return readUserDetails(ds.listJobsByType(jobTypeId, Status.OPEN));
     }
 
     private Collection<Job> readJobDetails(Collection<Job> jobs) {
+        return readFreelancerDetails(readUserDetails(jobs));
+    }
+
+    private Collection<Job> readUserDetails(Collection<Job> jobs) {
         try {
             for (Job job : jobs) {
                 User user = ds.editUser(job.getUserId());
                 job.setFirstName(user.getFirstName());
                 job.setLastName(user.getLastName());
+            }
+        } catch (FreeJobException e) {
+        }
+        return jobs;
+    }
+
+    private Collection<Job> readFreelancerDetails(Collection<Job> jobs) {
+        try {
+            for (Job job : jobs) {
+                if (job.getFreelancerId() == null) {
+                    continue;
+                }
+                Freelancer freelancer = ds
+                        .editFreelancer(job.getFreelancerId());
+                job.setFreelancerFirstName(freelancer.getFirstName());
+                job.setFreelancerLastName(freelancer.getLastName());
             }
         } catch (FreeJobException e) {
         }
@@ -184,20 +204,20 @@ public class ApiProvider implements Api {
     public Collection<Job> listOpenJobs(UUID jobTypeId, BigDecimal minLat,
             BigDecimal maxLat, BigDecimal minLong, BigDecimal maxLong)
                     throws ReadFailedException {
-        return readJobDetails(
+        return readUserDetails(
                 ds.listJobsByType(jobTypeId, minLat, maxLat, minLong, maxLong));
     }
 
     @Override
     public Collection<Job> listUserJobs(UUID userId, Status status)
             throws ReadFailedException {
-        return ds.listUserJobs(userId, status);
+        return readFreelancerDetails(ds.listUserJobs(userId, status));
     }
 
     @Override
     public Collection<Job> listFreelancerJobs(UUID freelancerId, Status status)
             throws ReadFailedException {
-        return readJobDetails(ds.listFreelancerJobs(freelancerId, status));
+        return readUserDetails(ds.listFreelancerJobs(freelancerId, status));
     }
 
     @Override
@@ -244,7 +264,7 @@ public class ApiProvider implements Api {
     @Override
     public Collection<Job> listSubscriptions(UUID freelancerId)
             throws ReadFailedException {
-        return readJobDetails(ds.listSubscriptions(freelancerId));
+        return readUserDetails(ds.listSubscriptions(freelancerId));
     }
 
     @Override

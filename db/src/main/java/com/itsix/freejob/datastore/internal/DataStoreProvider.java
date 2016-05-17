@@ -926,10 +926,14 @@ public class DataStoreProvider implements DataStore {
             if (jobId == null) {
                 jobId = UUID.randomUUID();
             }
+            Status status = job.getStatus();
+            if (status == null) {
+                status = Status.OPEN;
+            }
             px.setObject(1, jobId);
             px.setString(2, job.getTitle());
             px.setString(3, job.getDescription());
-            px.setString(4, Status.OPEN.name());
+            px.setString(4, status.name());
             px.setInt(5, job.getRating());
             px.setObject(6, job.getJobTypeId());
             px.setObject(7, job.getFreelancerId());

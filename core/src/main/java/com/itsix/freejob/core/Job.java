@@ -3,6 +3,9 @@ package com.itsix.freejob.core;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Job {
 
     public static enum Status {
@@ -26,6 +29,8 @@ public class Job {
     private BigDecimal longitude;
     private String lastName;
     private String firstName;
+    private String freelancerLastName;
+    private String freelancerFirstName;
 
     public UUID getId() {
         return id;
@@ -161,6 +166,22 @@ public class Job {
 
     public void setFirstName(String firstName) {
         this.firstName = firstName;
+    }
+
+    public String getFreelancerLastName() {
+        return freelancerLastName;
+    }
+
+    public void setFreelancerLastName(String freelancerLastName) {
+        this.freelancerLastName = freelancerLastName;
+    }
+
+    public String getFreelancerFirstName() {
+        return freelancerFirstName;
+    }
+
+    public void setFreelancerFirstName(String freelancerFirstName) {
+        this.freelancerFirstName = freelancerFirstName;
     }
 
 }

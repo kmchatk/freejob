@@ -27,7 +27,6 @@ import com.sun.jersey.api.core.ResourceContext;
 
 public class Jobs extends OsgiRestResource {
 
-  
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -38,7 +37,7 @@ public class Jobs extends OsgiRestResource {
     }
 
     @POST
-    @Path("netAmount/{netAmount}")
+    @Path("{jobId}/netAmount/{netAmount}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Result requestPayment(@PathParam("freelancerId") UUID freelancerId,
@@ -50,10 +49,10 @@ public class Jobs extends OsgiRestResource {
     }
 
     @POST
-    @Path("rating/{rating}")
+    @Path("{jobId}/rating/{rating}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Result rateJob(@PathParam("freelancerId") UUID userId,
+    public Result rateJob(@PathParam("userId") UUID userId,
             @PathParam("jobId") UUID jobId, @PathParam("rating") int rating)
                     throws FreeJobException {
         getApi().rateJob(userId, jobId, rating);

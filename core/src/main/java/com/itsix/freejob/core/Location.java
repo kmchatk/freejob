@@ -3,6 +3,9 @@ package com.itsix.freejob.core;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Location {
 
     private UUID id;

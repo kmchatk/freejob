@@ -113,6 +113,11 @@
 				<version>${jackson.version}</version>
 			</dependency>
 			<dependency>
+				<groupId>org.codehaus.jackson</groupId>
+				<artifactId>jackson-core-asl</artifactId>
+				<version>${jackson.version}</version>				
+			</dependency>
+			<dependency>
 				<groupId>org.ops4j.pax.web</groupId>
 				<artifactId>pax-web-jetty-bundle</artifactId>
 				<version>${pax.web.version}</version>

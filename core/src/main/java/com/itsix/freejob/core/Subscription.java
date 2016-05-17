@@ -2,6 +2,9 @@ package com.itsix.freejob.core;
 
 import java.util.UUID;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Subscription {
     private UUID jobId;
     private UUID freelancerId;
